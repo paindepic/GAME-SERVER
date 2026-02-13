@@ -1,10 +1,10 @@
 #pragma once
+#include "ue.h"
 #include <Windows.h>
 #include <cstdio>
 #include <format>
-#include <iostream>
 #include <intrin.h>
-#include "ue.h"
+#include <iostream>
 
 #include "discord.h"
 
@@ -12,526 +12,547 @@
 #include <fstream>
 
 static std::ofstream AAAA("FortniteLogs.log");
-#define LOG_(...) { std::cout << "VolcanoV2 : " << std::format(__VA_ARGS__) << std::endl; AAAA << std::format(__VA_ARGS__) << std::endl; }
+#define LOG_(...)                                                              \
+  {                                                                            \
+    std::cout << "VolcanoV2 : " << std::format(__VA_ARGS__) << std::endl;      \
+    AAAA << std::format(__VA_ARGS__) << std::endl;                             \
+  }
 
 // Forward declarations for global helper functions used by bot system
-namespace SDK
-{
-    class UGameplayStatics;
-    class UWorld;
-    class AFortGameStateAthena;
-}
+namespace SDK {
+class UGameplayStatics;
+class UWorld;
+class AFortGameStateAthena;
+} // namespace SDK
 
-SDK::UGameplayStatics* GetStatics();
-SDK::UWorld* GetWorld();
-SDK::AFortGameStateAthena* GetGameState();
+SDK::UGameplayStatics *GetStatics();
+SDK::UWorld *GetWorld();
+SDK::AFortGameStateAthena *GetGameState();
 
 // Forward declaration for bot system update
-namespace BotSystem
-{
-    void UpdateBotSystem(float DeltaTime);
+namespace BotSystem {
+void UpdateBotSystem(float DeltaTime);
 }
 
+namespace Globals {
 
-namespace Globals
-{
+bool bNoMCP = false; // currently no func but yk skidda
 
+bool bLategame = false;
+bool bPlayground = true;
+bool bSolo = false;
+bool bOnShotLTM = false;   // not done yet
+bool bFloorIsLava = false; // not done yet
 
-    bool bNoMCP = false; // currently no func but yk skidda
-
-    bool bLategame = false;
-    bool bPlayground = true;
-    bool bSolo = false;
-    bool bOnShotLTM = false; // not done yet
-    bool bFloorIsLava = false; // not done yet
-
-    /// playlist selector
-    std::string GetPlaylistName()
-    {
-        if (bOnShotLTM)
-            return "Playlist_Low_Solo.Playlist_Low_Solo";
-        if (bFloorIsLava)
-            return "Playlist_Fill_Solo.Playlist_Fill_Solo";  // flloorislava solo
-        if (bLategame)
-            return "Playlist_DefaultSolo.Playlist_DefaultSolo";// solo lategame
-        else if (bPlayground)
-            return "Playlist_Playground.Playlist_Playground";
-        else if (bSolo)
-            return "Playlist_DefaultSolo.Playlist_DefaultSolo";
-        else
-        // default fallback
-        return "Playlist_DefaultSolo.Playlist_DefaultSolo";
-    }
-
-    // Optional convenience variable
-    std::string PlaylistName = GetPlaylistName();
+/// playlist selector
+std::string GetPlaylistName() {
+  if (bOnShotLTM)
+    return "Playlist_Low_Solo.Playlist_Low_Solo";
+  if (bFloorIsLava)
+    return "Playlist_Fill_Solo.Playlist_Fill_Solo"; // flloorislava solo
+  if (bLategame)
+    return "Playlist_DefaultSolo.Playlist_DefaultSolo"; // solo lategame
+  else if (bPlayground)
+    return "Playlist_Playground.Playlist_Playground";
+  else if (bSolo)
+    return "Playlist_DefaultSolo.Playlist_DefaultSolo";
+  else
+    // default fallback
+    return "Playlist_DefaultSolo.Playlist_DefaultSolo";
 }
+
+// Optional convenience variable
+std::string PlaylistName = GetPlaylistName();
+} // namespace Globals
 
 // 0xFAABC0
-__int64 __fastcall PreLoginTest(__int64 a1, __int64 a2, int a3, int a4, __int64 a5)
-{
-    LOG_("PRELOIGN CALLED");
-    return 1;
+__int64 __fastcall PreLoginTest(__int64 a1, __int64 a2, int a3, int a4,
+                                __int64 a5) {
+  LOG_("PRELOIGN CALLED");
+  return 1;
 }
 
 // hmmm
-const wchar_t* (*DedicatedServer_GetPoolOG)(char a1);
-const wchar_t* DedicatedServer_GetPool(char PlaylistModeIdk)
-{
-    auto OriginalRet = DedicatedServer_GetPoolOG(PlaylistModeIdk);
-    LOG_("dddddd 0x{:x}", __int64(_ReturnAddress()) - __int64(GetModuleHandleW(0)));
+const wchar_t *(*DedicatedServer_GetPoolOG)(char a1);
+const wchar_t *DedicatedServer_GetPool(char PlaylistModeIdk) {
+  auto OriginalRet = DedicatedServer_GetPoolOG(PlaylistModeIdk);
+  LOG_("dddddd 0x{:x}",
+       __int64(_ReturnAddress()) - __int64(GetModuleHandleW(0)));
 
-    return L"All";
+  return L"All";
 }
 
-uintptr_t GetOffsetBRUH(uintptr_t Offset)
-{
-    return __int64(GetModuleHandleW(0)) + Offset;
+uintptr_t GetOffsetBRUH(uintptr_t Offset) {
+  return __int64(GetModuleHandleW(0)) + Offset;
 }
 
-static UNetDriver* (*CreateNetDriver)(UEngine*, SDK::UWorld*, FName) = decltype(CreateNetDriver)(GetOffsetBRUH(0x2FBED30));
-static void (*SetWorld)(UNetDriver*, SDK::UWorld*) = decltype(SetWorld)(GetOffsetBRUH(0x2D38590));
-static bool (*InitListenOG)(void*, void*, FURL&, bool, FString&) = decltype(InitListenOG)(GetOffsetBRUH(0x634C10));
-static void (*ServerReplicateActors)(void*);
+static UNetDriver *(*CreateNetDriver)(UEngine *, SDK::UWorld *, FName) =
+    decltype(CreateNetDriver)(GetOffsetBRUH(0x2FBED30));
+static void (*SetWorld)(UNetDriver *, SDK::UWorld *) =
+    decltype(SetWorld)(GetOffsetBRUH(0x2D38590));
+static bool (*InitListenOG)(void *, void *, FURL &, bool, FString &) =
+    decltype(InitListenOG)(GetOffsetBRUH(0x634C10));
+static void (*ServerReplicateActors)(void *);
 
-BYTE* __fastcall ChangeGameSessionId()
-{
-    return nullptr;
-}
+BYTE *__fastcall ChangeGameSessionId() { return nullptr; }
 
-template<typename T>
-T* Cast(UObject* Object, bool bForceCheck = true)
-{
-    if (Object)
-    {
-        if (bForceCheck)
-        {
-            return Object->IsA(T::StaticClass()) ? (T*)Object : nullptr;
-        }
-        else
-        {
-            return (T*)Object;
-        }
+template <typename T> T *Cast(UObject *Object, bool bForceCheck = true) {
+  if (Object) {
+    if (bForceCheck) {
+      return Object->IsA(T::StaticClass()) ? (T *)Object : nullptr;
+    } else {
+      return (T *)Object;
     }
-    return nullptr;
+  }
+  return nullptr;
 }
 
-static bool bMcp = true; 
-void (*DispatchReqOG)(__int64 a1, __int64* a2, int a3);
-void DispatchReqHook(__int64 a1, __int64* a2, int a3)
-{
-    LOG_("DispatchRequest: 0x{:x}", __int64(_ReturnAddress()) - __int64(GetModuleHandleW(0)))
-    return DispatchReqOG(a1, a2, bMcp ? 3 : a3);
+static bool bMcp = true;
+void (*DispatchReqOG)(__int64 a1, __int64 *a2, int a3);
+void DispatchReqHook(__int64 a1, __int64 *a2, int a3) {
+  LOG_("DispatchRequest: 0x{:x}",
+       __int64(_ReturnAddress()) - __int64(GetModuleHandleW(0)))
+  return DispatchReqOG(a1, a2, bMcp ? 3 : a3);
 }
 
-char __fastcall CanActivateAbility(__int64 a1, unsigned int a2, DWORD* a3, __int64 a4, __int64 a5, __int64* a6)
-{
-    // LOG_("CanActivateAbility called")
-    return 1;
+char __fastcall CanActivateAbility(__int64 a1, unsigned int a2, DWORD *a3,
+                                   __int64 a4, __int64 a5, __int64 *a6) {
+  // LOG_("CanActivateAbility called")
+  return 1;
 }
 
 // 0x2D39300
 // frf rfr frf rf
-void (*TickFlushOG)(UNetDriver*);
-void TickFlushHook(UNetDriver* a1)
-{
-    if (!a1)
-        return;
+void (*TickFlushOG)(UNetDriver *);
+void TickFlushHook(UNetDriver *a1) {
+  if (!a1)
+    return;
 
-    if (a1->ClientConnections.Num() > 0 && a1->ReplicationDriver && !a1->ClientConnections[0]->InternalAck)
-        ServerReplicateActors(a1->ReplicationDriver);
+  if (a1->ClientConnections.Num() > 0 && a1->ReplicationDriver &&
+      !a1->ClientConnections[0]->InternalAck)
+    ServerReplicateActors(a1->ReplicationDriver);
 
-    // Update bot system every tick
-    static float LastBotUpdate = 0.0f;
-    float CurrentTime = GetStatics()->GetTimeSeconds(GetWorld());
+  // Update bot system every tick
+  static float LastBotUpdate = 0.0f;
+  auto Statics = GetStatics();
+  auto World = GetWorld();
+  if (Statics && World) {
+    float CurrentTime = Statics->GetTimeSeconds(World);
     if (CurrentTime - LastBotUpdate >= 0.033f) // Update at ~30 FPS
     {
-        BotSystem::UpdateBotSystem(CurrentTime - LastBotUpdate);
-        LastBotUpdate = CurrentTime;
+      BotSystem::UpdateBotSystem(CurrentTime - LastBotUpdate);
+      LastBotUpdate = CurrentTime;
     }
+  }
 
-    return TickFlushOG(a1);
+  return TickFlushOG(a1);
 }
 
-void CollectGarbage()
-{
-    LOG_("COLLECT GARBAGE CALLED");
+void CollectGarbage() {
+  LOG_("COLLECT GARBAGE CALLED");
+  return;
+}
+
+float GetMaxTickRate() { return 30.f; }
+
+__int64 NoMcp() {
+  if (__int64(_ReturnAddress()) - __int64(GetModuleHandleW(0)) != 0x16ddffc)
+    LOG_("NoMcp retaddr: 0x{:x}",
+         __int64(_ReturnAddress()) - __int64(GetModuleHandleW(0)));
+
+  return 1; // NoMcp
+}
+
+char KickPlayer(__int64, __int64, __int64) { return 1; }
+
+char ValFailure1(__int64, __int64) { return 0; }
+
+__int64 __fastcall NoReserve(__int64 a1, __int64 a2, __int64 a3, char a4) {
+  return 0;
+}
+
+__int64 UWorldGetNetMode(SDK::UWorld *a1) { return 1; }
+
+__int64 AActorGetNetMode(AActor *a1) { return 1; }
+
+template <typename T> T *GetDefObj() {
+  return (T *)T::StaticClass()->DefaultObject;
+}
+
+UFortEngine *GetEngine() {
+  static auto clapped = UObject::FindObject<UFortEngine>("FortEngine_");
+  return clapped;
+}
+
+SDK::UWorld *GetWorld() {
+  auto Engine = GetEngine();
+  if (!Engine || !Engine->GameViewport)
+    return nullptr;
+  return Engine->GameViewport->World;
+}
+
+SDK::AFortGameStateAthena *GetGameState() {
+  auto World = GetWorld();
+  if (!World)
+    return nullptr;
+  return (SDK::AFortGameStateAthena *)World->GameState;
+}
+
+AFortGameModeAthena *GetGameMode() {
+  auto World = GetWorld();
+  if (!World)
+    return nullptr;
+  return (AFortGameModeAthena *)World->AuthorityGameMode;
+}
+
+UFortKismetLibrary *GetFortKismet() { return GetDefObj<UFortKismetLibrary>(); }
+
+SDK::UGameplayStatics *GetStatics() {
+  return GetDefObj<SDK::UGameplayStatics>();
+}
+
+UKismetStringLibrary *GetString() { return GetDefObj<UKismetStringLibrary>(); }
+
+SDK::UKismetMathLibrary *GetMath() {
+  return GetDefObj<SDK::UKismetMathLibrary>();
+}
+
+void VirtualHook(void *Objce, int Index, void *Detour, void **OG = nullptr) {
+  auto vft = *(void ***)Objce;
+  if (!vft || !vft[Index]) {
     return;
+  }
+
+  if (OG)
+    *OG = vft[Index];
+
+  DWORD dwOld;
+  VirtualProtect(&vft[Index], 8, PAGE_EXECUTE_READWRITE,
+                 &dwOld); // sizeof(void*)
+
+  vft[Index] = Detour;
+
+  DWORD dwTemp;
+  VirtualProtect(&vft[Index], 8, dwOld, &dwTemp); // sizeof(void*)
 }
 
-float GetMaxTickRate()
-{
-    return 30.f; 
+template <typename UEType>
+UEType *StaticFindObject(const std::string &ObjectName,
+                         UClass *Class = UObject::StaticClass()) {
+  auto OrigInName = std::wstring(ObjectName.begin(), ObjectName.end()).c_str();
+  static void *(*StaticFindObjectOG)(
+      UClass *, UObject *Package, const wchar_t *OrigInName, bool ExactClass) =
+      decltype(StaticFindObjectOG)(__int64(GetModuleHandleW(0)) + 0x1E825F0);
+  return (UEType *)StaticFindObjectOG(Class, nullptr, OrigInName, false);
 }
 
-__int64 NoMcp()
-{
-    if(__int64(_ReturnAddress()) - __int64(GetModuleHandleW(0)) != 0x16ddffc)
-        LOG_("NoMcp retaddr: 0x{:x}", __int64(_ReturnAddress()) - __int64(GetModuleHandleW(0)));
+template <typename T = UObject> T *StaticLoadObject(const std::string &Name) {
+  T *Object = StaticFindObject<T>(Name);
 
-    return 1; //NoMcp
+  if (!Object) {
+    static void *(*StaticLoadObjectOG)(
+        UClass *Class, UObject *InOuter, const TCHAR *Name,
+        const TCHAR *Filename, uint32_t LoadFlags, UObject *Sandbox,
+        bool bAllowObjectReconciliation, void *) =
+        decltype(StaticLoadObjectOG)(__int64(GetModuleHandleW(0)) + 0x1E82EE0);
+    auto NameO = std::wstring(Name.begin(), Name.end()).c_str();
+    Object = (T *)StaticLoadObjectOG(T::StaticClass(), nullptr, NameO, nullptr,
+                                     0, nullptr, false, nullptr);
+  }
+
+  return Object;
 }
 
-char KickPlayer(__int64, __int64, __int64)
-{
-    return 1;
+void sinCos(float *ScalarSin, float *ScalarCos, float Value) {
+  float quotient = (0.31830988618f * 0.5f) * Value;
+  if (Value >= 0.0f) {
+    quotient = (float)((int)(quotient + 0.5f));
+  } else {
+    quotient = (float)((int)(quotient - 0.5f));
+  }
+  float y = Value - (2.0f * 3.1415926535897932f) * quotient;
+  float sign;
+  if (y > 1.57079632679f) {
+    y = 3.1415926535897932f - y;
+    sign = -1.0f;
+  } else if (y < -1.57079632679f) {
+    y = -3.1415926535897932f - y;
+    sign = -1.0f;
+  } else {
+    sign = +1.0f;
+  }
+  float y2 = y * y;
+  *ScalarSin =
+      (((((-2.3889859e-08f * y2 + 2.7525562e-06f) * y2 - 0.00019840874f) * y2 +
+         0.0083333310f) *
+            y2 -
+        0.16666667f) *
+           y2 +
+       1.0f) *
+      y;
+  float p =
+      ((((-2.6051615e-07f * y2 + 2.4760495e-05f) * y2 - 0.0013888378f) * y2 +
+        0.041666638f) *
+           y2 -
+       0.5f) *
+          y2 +
+      1.0f;
+  *ScalarCos = sign * p;
 }
 
-char ValFailure1(__int64, __int64)
-{
-    return 0;
+FQuat FRotToQuat(FRotator Rot) {
+  const float DEG_TO_RAD = 3.1415926535897932f / (180.f);
+  const float DIVIDE_BY_2 = DEG_TO_RAD / 2.f;
+  float SP, SY, SR;
+  float CP, CY, CR;
+
+  sinCos(&SP, &CP, Rot.Pitch * DIVIDE_BY_2);
+  sinCos(&SY, &CY, Rot.Yaw * DIVIDE_BY_2);
+  sinCos(&SR, &CR, Rot.Roll * DIVIDE_BY_2);
+
+  FQuat RotationQuat;
+  RotationQuat.X = CR * SP * SY - SR * CP * CY;
+  RotationQuat.Y = -CR * SP * CY - SR * CP * SY;
+  RotationQuat.Z = CR * CP * SY - SR * SP * CY;
+  RotationQuat.W = CR * CP * CY + SR * SP * SY;
+
+  return RotationQuat;
 }
 
-__int64 __fastcall NoReserve(__int64 a1, __int64 a2, __int64 a3, char a4)
-{
-    return 0;
+template <typename T>
+T *SpawnActor(UClass *Class = T::StaticClass(), FVector Loc = {},
+              FRotator Rot = {}, AActor *Owner = nullptr) {
+  auto Statics = GetStatics();
+  auto World = GetWorld();
+  if (!Statics || !World)
+    return nullptr;
+
+  FTransform Transform{};
+  Transform.Scale3D = FVector(1, 1, 1);
+  Transform.Translation = Loc;
+  Transform.Rotation = FRotToQuat(Rot);
+
+  return (T *)Statics->FinishSpawningActor(
+      Statics->BeginDeferredActorSpawnFromClass(
+          World, Class, Transform,
+          ESpawnActorCollisionHandlingMethod::AlwaysSpawn, Owner),
+      Transform);
 }
 
-__int64 UWorldGetNetMode(SDK::UWorld* a1)
-{
-    return 1;
+void Listen() {
+  auto World = GetWorld();
+  auto Engine = GetEngine();
+  if (!World || !Engine) {
+    LOG_("ERROR: World or Engine is null in Listen(), cannot start server");
+    return;
+  }
+
+  World->NetDriver = CreateNetDriver(Engine, World, FName(282));
+  if (!World->NetDriver) {
+    LOG_("ERROR: Failed to create NetDriver");
+    return;
+  }
+  World->NetDriver->NetDriverName = FName(282);
+  World->NetDriver->World =
+      World; // useless idk tbh but it crashes when I don't set this var
+
+  FString err;
+  FURL url = FURL();
+  url.Port = 7777; // I would make this port something gay cuz yall mfs but I
+                   // forgor I will get spammed for why not join
+  InitListenOG(World->NetDriver, World, url, false, err);
+  SetWorld(World->NetDriver, World);
+
+  World->LevelCollections[0].NetDriver = World->NetDriver;
+  World->LevelCollections[1].NetDriver = World->NetDriver;
+
+  void **repDriverVTable = *(void ***)World->NetDriver->ReplicationDriver;
+  LOG_("aaaa : {}", __int64(repDriverVTable) - __int64(GetModuleHandleW(0)));
+  ServerReplicateActors =
+      decltype(ServerReplicateActors)(repDriverVTable[0x56]); // fr
+  SetConsoleTitleA("FMod 8.51 on Top!  | Join up rebootian :P");
+  UptimeWebHook.send_embed("Server is up!", "Fortnite Version: *`8.51`*");
 }
 
-__int64 AActorGetNetMode(AActor* a1)
-{
-    return 1;
-}
+int GetPropOffset(UObject *Object, const std::string &PropertyName) {
+  for (auto Class = Object->Class; Class; Class = (UClass *)Class->Super) {
+    auto Property = Class->Children;
+    if (Property) {
+      std::string PropName = Property->GetName();
+      if (PropName == PropertyName) {
+        return *(int *)(__int64(Property) + 0x44); // Offset_Internal
+      }
 
-template<typename T>
-T* GetDefObj()
-{
-    return (T*)T::StaticClass()->DefaultObject;
-}
-
-UFortEngine* GetEngine()
-{
-    static auto clapped = UObject::FindObject<UFortEngine>("FortEngine_");
-    return clapped;
-}
-
-SDK::UWorld* GetWorld()
-{
-    return GetEngine()->GameViewport->World;
-}
-
-SDK::AFortGameStateAthena* GetGameState()
-{
-    return (SDK::AFortGameStateAthena*)GetWorld()->GameState;
-}
-
-AFortGameModeAthena* GetGameMode()
-{
-    return (AFortGameModeAthena*)GetWorld()->AuthorityGameMode;
-}
-
-UFortKismetLibrary* GetFortKismet()
-{
-    return GetDefObj<UFortKismetLibrary>();
-}
-
-SDK::UGameplayStatics* GetStatics()
-{
-    return GetDefObj<SDK::UGameplayStatics>();
-}
-
-UKismetStringLibrary* GetString()
-{
-    return GetDefObj<UKismetStringLibrary>();
-}
-
-SDK::UKismetMathLibrary* GetMath()
-{
-    return GetDefObj<SDK::UKismetMathLibrary>();
-}
-
-void VirtualHook(void* Objce, int Index, void* Detour, void** OG = nullptr)
-{
-    auto vft = *(void***)Objce;
-    if (!vft || !vft[Index])
-    {
-        return;
-    }
-
-    if (OG)
-        *OG = vft[Index];
-
-    DWORD dwOld; 
-    VirtualProtect(&vft[Index], 8, PAGE_EXECUTE_READWRITE, &dwOld); // sizeof(void*)
-
-    vft[Index] = Detour;
-
-    DWORD dwTemp;
-    VirtualProtect(&vft[Index], 8, dwOld, &dwTemp); // sizeof(void*)
-}
-
-template<typename UEType>
-UEType* StaticFindObject(const std::string& ObjectName, UClass* Class = UObject::StaticClass())
-{
-    auto OrigInName = std::wstring(ObjectName.begin(), ObjectName.end()).c_str();
-    static void* (*StaticFindObjectOG)(UClass*, UObject * Package, const wchar_t* OrigInName, bool ExactClass) = decltype(StaticFindObjectOG)(__int64(GetModuleHandleW(0)) + 0x1E825F0);
-    return (UEType*)StaticFindObjectOG(Class, nullptr, OrigInName, false);
-}
-
-template<typename T = UObject>
-T* StaticLoadObject(const std::string& Name)
-{
-    T* Object = StaticFindObject<T>(Name);
-
-    if (!Object)
-    {
-        static void* (*StaticLoadObjectOG)(UClass * Class, UObject * InOuter, const TCHAR * Name, const TCHAR * Filename, uint32_t LoadFlags, UObject * Sandbox, bool bAllowObjectReconciliation, void*) = decltype(StaticLoadObjectOG)(__int64(GetModuleHandleW(0)) + 0x1E82EE0);
-        auto NameO = std::wstring(Name.begin(), Name.end()).c_str();
-        Object = (T*)StaticLoadObjectOG(T::StaticClass(), nullptr, NameO, nullptr, 0, nullptr, false, nullptr);
-    }
-
-    return Object;
-}
-
-void sinCos(float* ScalarSin, float* ScalarCos, float Value)
-{
-    float quotient = (0.31830988618f * 0.5f) * Value;
-    if (Value >= 0.0f)
-    {
-        quotient = (float)((int)(quotient + 0.5f));
-    }
-    else
-    {
-        quotient = (float)((int)(quotient - 0.5f));
-    }
-    float y = Value - (2.0f * 3.1415926535897932f) * quotient;
-    float sign;
-    if (y > 1.57079632679f)
-    {
-        y = 3.1415926535897932f - y;
-        sign = -1.0f;
-    }
-    else if (y < -1.57079632679f)
-    {
-        y = -3.1415926535897932f - y;
-        sign = -1.0f;
-    }
-    else
-    {
-        sign = +1.0f;
-    }
-    float y2 = y * y;
-    *ScalarSin = (((((-2.3889859e-08f * y2 + 2.7525562e-06f) * y2 - 0.00019840874f) * y2 + 0.0083333310f) * y2 - 0.16666667f) * y2 + 1.0f) * y;
-    float p = ((((-2.6051615e-07f * y2 + 2.4760495e-05f) * y2 - 0.0013888378f) * y2 + 0.041666638f) * y2 - 0.5f) * y2 + 1.0f;
-    *ScalarCos = sign * p;
-}
-
-FQuat FRotToQuat(FRotator Rot)
-{
-    const float DEG_TO_RAD = 3.1415926535897932f / (180.f);
-    const float DIVIDE_BY_2 = DEG_TO_RAD / 2.f;
-    float SP, SY, SR;
-    float CP, CY, CR;
-
-    sinCos(&SP, &CP, Rot.Pitch * DIVIDE_BY_2);
-    sinCos(&SY, &CY, Rot.Yaw * DIVIDE_BY_2);
-    sinCos(&SR, &CR, Rot.Roll * DIVIDE_BY_2);
-
-    FQuat RotationQuat;
-    RotationQuat.X = CR * SP * SY - SR * CP * CY;
-    RotationQuat.Y = -CR * SP * CY - SR * CP * SY;
-    RotationQuat.Z = CR * CP * SY - SR * SP * CY;
-    RotationQuat.W = CR * CP * CY + SR * SP * SY;
-
-    return RotationQuat;
-}
-
-template<typename T>
-T* SpawnActor(UClass* Class = T::StaticClass(), FVector Loc = {}, FRotator Rot = {}, AActor* Owner = nullptr)
-{
-    FTransform Transform{};
-    Transform.Scale3D = FVector(1, 1, 1);
-    Transform.Translation = Loc;
-    Transform.Rotation = FRotToQuat(Rot);
-
-    return (T*)GetStatics()->FinishSpawningActor(GetStatics()->BeginDeferredActorSpawnFromClass(GetWorld(), Class, Transform, ESpawnActorCollisionHandlingMethod::AlwaysSpawn, Owner), Transform);
-}
-
-void Listen()
-{
-    GetWorld()->NetDriver = CreateNetDriver(GetEngine(), GetWorld(), FName(282));
-    if (!GetWorld()->NetDriver)
-    {
-        return;
-    }
-    GetWorld()->NetDriver->NetDriverName = FName(282);
-    GetWorld()->NetDriver->World = GetWorld(); // useless idk tbh but it crashes when I don't set this var
-
-    FString err;
-    FURL url = FURL();
-    url.Port = 7777; // I would make this port something gay cuz yall mfs but I forgor I will get spammed for why not join
-    InitListenOG(GetWorld()->NetDriver, GetWorld(), url, false, err);
-    SetWorld(GetWorld()->NetDriver, GetWorld());
-
-    GetWorld()->LevelCollections[0].NetDriver = GetWorld()->NetDriver;
-    GetWorld()->LevelCollections[1].NetDriver = GetWorld()->NetDriver;
-
-
-    void** repDriverVTable = *(void***)GetWorld()->NetDriver->ReplicationDriver;
-    LOG_("aaaa : {}", __int64(repDriverVTable) - __int64(GetModuleHandleW(0)));
-    ServerReplicateActors = decltype(ServerReplicateActors)(repDriverVTable[0x56]); // fr
-    SetConsoleTitleA("FMod 8.51 on Top!  | Join up rebootian :P");
-    UptimeWebHook.send_embed("Server is up!", "Fortnite Version: *`8.51`*");
-}
-
-int GetPropOffset(UObject* Object, const std::string& PropertyName)
-{
-    for (auto Class = Object->Class; Class; Class = (UClass*)Class->Super)
-    {
-        auto Property = Class->Children;
-        if (Property)
-        {
-            std::string PropName = Property->GetName();
-            if (PropName == PropertyName)
-            {
-                return *(int*)(__int64(Property) + 0x44); // Offset_Internal
-            }
-
-            while (Property)
-            {
-                if (PropName == PropertyName)
-                {
-                    return *(int*)(__int64(Property) + 0x44); // Offset_Internal
-                }
-
-                Property = Property->Next;
-                PropName = Property ? Property->GetName() : "";
-            }
+      while (Property) {
+        if (PropName == PropertyName) {
+          return *(int *)(__int64(Property) + 0x44); // Offset_Internal
         }
+
+        Property = Property->Next;
+        PropName = Property ? Property->GetName() : "";
+      }
     }
-    return 0;
+  }
+  return 0;
 }
 
-AFortPickupAthena* SpawnPickup(FFortItemEntry& ItemEntry, FVector Loc, EFortPickupSourceTypeFlag SourceType, EFortPickupSpawnSource Source, int OverrideCount = -1)
-{
-    auto SpawnedPickup = SpawnActor<AFortPickupAthena>(AFortPickupAthena::StaticClass(), Loc);
-    SpawnedPickup->bRandomRotation = true;
+AFortPickupAthena *SpawnPickup(FFortItemEntry &ItemEntry, FVector Loc,
+                               EFortPickupSourceTypeFlag SourceType,
+                               EFortPickupSpawnSource Source,
+                               int OverrideCount = -1) {
+  auto SpawnedPickup =
+      SpawnActor<AFortPickupAthena>(AFortPickupAthena::StaticClass(), Loc);
+  if (!SpawnedPickup)
+    return nullptr;
 
-    SpawnedPickup->PrimaryPickupItemEntry = ItemEntry;
-    SpawnedPickup->PrimaryPickupItemEntry.Count = OverrideCount != -1 ? OverrideCount : ItemEntry.Count;
-    SpawnedPickup->OnRep_PrimaryPickupItemEntry();
+  SpawnedPickup->bRandomRotation = true;
 
-    SpawnedPickup->TossPickup(Loc, nullptr, -1, true, SourceType, Source);
+  SpawnedPickup->PrimaryPickupItemEntry = ItemEntry;
+  SpawnedPickup->PrimaryPickupItemEntry.Count =
+      OverrideCount != -1 ? OverrideCount : ItemEntry.Count;
+  SpawnedPickup->OnRep_PrimaryPickupItemEntry();
 
-    SpawnedPickup->SetReplicateMovement(true);
-    SpawnedPickup->MovementComponent = (UProjectileMovementComponent*)GetStatics()->SpawnObject(UProjectileMovementComponent::StaticClass(), SpawnedPickup);
-    if (SourceType == EFortPickupSourceTypeFlag::Container)
-    {
-        SpawnedPickup->bTossedFromContainer = true;
-        SpawnedPickup->OnRep_TossedFromContainer();
-    }
+  SpawnedPickup->TossPickup(Loc, nullptr, -1, true, SourceType, Source);
 
-    return SpawnedPickup;
+  SpawnedPickup->SetReplicateMovement(true);
+
+  auto Statics = GetStatics();
+  if (Statics) {
+    SpawnedPickup->MovementComponent =
+        (UProjectileMovementComponent *)Statics->SpawnObject(
+            UProjectileMovementComponent::StaticClass(), SpawnedPickup);
+  }
+
+  if (SourceType == EFortPickupSourceTypeFlag::Container) {
+    SpawnedPickup->bTossedFromContainer = true;
+    SpawnedPickup->OnRep_TossedFromContainer();
+  }
+
+  return SpawnedPickup;
 }
 
-AFortPickupAthena* SpawnPickup(UFortItemDefinition* ItemDef, int OverrideCount, int LoadedAmmo, FVector Loc, EFortPickupSourceTypeFlag SourceType, EFortPickupSpawnSource Source)
-{
-    auto SpawnedPickup = SpawnActor<AFortPickupAthena>(AFortPickupAthena::StaticClass(), Loc);
-    SpawnedPickup->bRandomRotation = true;
+AFortPickupAthena *SpawnPickup(UFortItemDefinition *ItemDef, int OverrideCount,
+                               int LoadedAmmo, FVector Loc,
+                               EFortPickupSourceTypeFlag SourceType,
+                               EFortPickupSpawnSource Source) {
+  auto SpawnedPickup =
+      SpawnActor<AFortPickupAthena>(AFortPickupAthena::StaticClass(), Loc);
+  if (!SpawnedPickup)
+    return nullptr;
 
-    auto& PickupEntry = SpawnedPickup->PrimaryPickupItemEntry;
-    PickupEntry.ItemDefinition = ItemDef;
-    PickupEntry.Count = OverrideCount;
-    PickupEntry.LoadedAmmo = LoadedAmmo;
-    PickupEntry.ReplicationKey++;
-    SpawnedPickup->OnRep_PrimaryPickupItemEntry();
+  SpawnedPickup->bRandomRotation = true;
 
-    SpawnedPickup->TossPickup(Loc, nullptr, -1, true, SourceType, Source);
+  auto &PickupEntry = SpawnedPickup->PrimaryPickupItemEntry;
+  PickupEntry.ItemDefinition = ItemDef;
+  PickupEntry.Count = OverrideCount;
+  PickupEntry.LoadedAmmo = LoadedAmmo;
+  PickupEntry.ReplicationKey++;
+  SpawnedPickup->OnRep_PrimaryPickupItemEntry();
 
-    SpawnedPickup->SetReplicateMovement(true);
-    SpawnedPickup->MovementComponent = (UProjectileMovementComponent*)GetStatics()->SpawnObject(UProjectileMovementComponent::StaticClass(), SpawnedPickup);
+  SpawnedPickup->TossPickup(Loc, nullptr, -1, true, SourceType, Source);
 
-    if (SourceType == EFortPickupSourceTypeFlag::Container)
-    {
-        SpawnedPickup->bTossedFromContainer = true;
-        SpawnedPickup->OnRep_TossedFromContainer();
-    }
+  SpawnedPickup->SetReplicateMovement(true);
 
-    return SpawnedPickup;
+  auto Statics = GetStatics();
+  if (Statics) {
+    SpawnedPickup->MovementComponent =
+        (UProjectileMovementComponent *)Statics->SpawnObject(
+            UProjectileMovementComponent::StaticClass(), SpawnedPickup);
+  }
+
+  if (SourceType == EFortPickupSourceTypeFlag::Container) {
+    SpawnedPickup->bTossedFromContainer = true;
+    SpawnedPickup->OnRep_TossedFromContainer();
+  }
+
+  return SpawnedPickup;
 }
 
 static int WOW = 0;
-void (*SetMegaStormStuffidkREALOG)(AFortGameModeAthena*, int);
-void SetMegaStormStuffHOOK(AFortGameModeAthena* a1, int a2)
-{
-    LOG_("a2: {}", a2);
-    
-    // Call original function first
-    SetMegaStormStuffidkREALOG(a1, a2);
+void (*SetMegaStormStuffidkREALOG)(AFortGameModeAthena *, int);
+void SetMegaStormStuffHOOK(AFortGameModeAthena *a1, int a2) {
+  LOG_("a2: {}", a2);
 
-    auto GameState = GetGameState();
-    if (!GameState || !GameState->SafeZoneIndicator)
-        return;
+  // Call original function first
+  SetMegaStormStuffidkREALOG(a1, a2);
 
-    float CurrentTime = GetStatics()->GetTimeSeconds(GetWorld());
-    
-    // Battle Royale Storm Timing Configuration
-    // These values match standard BR timing (not 3 hours)
-    const float FirstZoneDelay = 300.0f;      // 5 minutes before first zone starts
-    const float ZoneShrinkTime = 180.0f;      // 3 minutes to shrink
-    const float ZoneWaitTime = 120.0f;        // 2 minutes between zones
-    
-    if (Globals::bLategame)
-    {
-        LOG_("Lategame mode - configuring fast storm");
-        // Lategame: Fast storm for quick matches
-        if (WOW < 4)
-        {
-            GameState->SafeZoneIndicator->SafeZoneStartShrinkTime = CurrentTime + 10.0f;
-            GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameState->SafeZoneIndicator->SafeZoneStartShrinkTime + 60.0f;
-        }
-        if (WOW == 3)
-        {
-            GameState->SafeZoneIndicator->SafeZoneStartShrinkTime = CurrentTime + 30.0f;
-        }
-    }
-    else
-    {
-        LOG_("Standard BR mode - configuring storm timing");
-        // Standard BR timing
-        if (WOW == 0)
-        {
-            // First zone - wait 5 minutes then shrink for 3 minutes
-            GameState->SafeZoneIndicator->SafeZoneStartShrinkTime = CurrentTime + FirstZoneDelay;
-            GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameState->SafeZoneIndicator->SafeZoneStartShrinkTime + ZoneShrinkTime;
-        }
-        else if (WOW < 9)  // 9 total zones
-        {
-            // Subsequent zones - wait 2 minutes then shrink (shrink time decreases)
-            float ShrinkTime = ZoneShrinkTime - (WOW * 15.0f);  // Each zone shrinks faster
-            if (ShrinkTime < 60.0f) ShrinkTime = 60.0f;  // Minimum 1 minute
-            
-            GameState->SafeZoneIndicator->SafeZoneStartShrinkTime = CurrentTime + ZoneWaitTime;
-            GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameState->SafeZoneIndicator->SafeZoneStartShrinkTime + ShrinkTime;
-        }
-        
-        // Set initial radius based on zone number
-        float BaseRadius = 20000.0f;  // Starting radius
-        float CurrentRadius = BaseRadius * std::pow(0.5f, static_cast<float>(WOW));
-        if (CurrentRadius < 1000.0f) CurrentRadius = 1000.0f;  // Minimum radius
-        
-        GameState->SafeZoneIndicator->Radius = CurrentRadius;
-        GameState->SafeZoneIndicator->NextRadius = CurrentRadius * 0.5f;
-    }
-    
-    WOW++;
-    
-    LOG_("Storm Zone {} configured - Start: {:.1f}s, Finish: {:.1f}s, Radius: {:.1f}",
-         WOW,
-         GameState->SafeZoneIndicator->SafeZoneStartShrinkTime - CurrentTime,
-         GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime - CurrentTime,
-         GameState->SafeZoneIndicator->Radius);
-
+  auto GameState = GetGameState();
+  if (!GameState || !GameState->SafeZoneIndicator)
     return;
+
+  auto Statics = GetStatics();
+  auto World = GetWorld();
+  if (!Statics || !World)
+    return;
+
+  float CurrentTime = Statics->GetTimeSeconds(World);
+
+  // Battle Royale Storm Timing Configuration
+  // These values match standard BR timing (not 3 hours)
+  const float FirstZoneDelay = 300.0f; // 5 minutes before first zone starts
+  const float ZoneShrinkTime = 180.0f; // 3 minutes to shrink
+  const float ZoneWaitTime = 120.0f;   // 2 minutes between zones
+
+  if (Globals::bLategame) {
+    LOG_("Lategame mode - configuring fast storm");
+    // Lategame: Fast storm for quick matches
+    if (WOW < 4) {
+      GameState->SafeZoneIndicator->SafeZoneStartShrinkTime =
+          CurrentTime + 10.0f;
+      GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime =
+          GameState->SafeZoneIndicator->SafeZoneStartShrinkTime + 60.0f;
+    }
+    if (WOW == 3) {
+      GameState->SafeZoneIndicator->SafeZoneStartShrinkTime =
+          CurrentTime + 30.0f;
+    }
+  } else {
+    LOG_("Standard BR mode - configuring storm timing");
+    // Standard BR timing
+    if (WOW == 0) {
+      // First zone - wait 5 minutes then shrink for 3 minutes
+      GameState->SafeZoneIndicator->SafeZoneStartShrinkTime =
+          CurrentTime + FirstZoneDelay;
+      GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime =
+          GameState->SafeZoneIndicator->SafeZoneStartShrinkTime +
+          ZoneShrinkTime;
+    } else if (WOW < 9) // 9 total zones
+    {
+      // Subsequent zones - wait 2 minutes then shrink (shrink time decreases)
+      float ShrinkTime =
+          ZoneShrinkTime - (WOW * 15.0f); // Each zone shrinks faster
+      if (ShrinkTime < 60.0f)
+        ShrinkTime = 60.0f; // Minimum 1 minute
+
+      GameState->SafeZoneIndicator->SafeZoneStartShrinkTime =
+          CurrentTime + ZoneWaitTime;
+      GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime =
+          GameState->SafeZoneIndicator->SafeZoneStartShrinkTime + ShrinkTime;
+    }
+
+    // Set initial radius based on zone number
+    float BaseRadius = 20000.0f; // Starting radius
+    float CurrentRadius = BaseRadius * std::pow(0.5f, static_cast<float>(WOW));
+    if (CurrentRadius < 1000.0f)
+      CurrentRadius = 1000.0f; // Minimum radius
+
+    GameState->SafeZoneIndicator->Radius = CurrentRadius;
+    GameState->SafeZoneIndicator->NextRadius = CurrentRadius * 0.5f;
+  }
+
+  WOW++;
+
+  LOG_("Storm Zone {} configured - Start: {:.1f}s, Finish: {:.1f}s, Radius: "
+       "{:.1f}",
+       WOW, GameState->SafeZoneIndicator->SafeZoneStartShrinkTime - CurrentTime,
+       GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime - CurrentTime,
+       GameState->SafeZoneIndicator->Radius);
+
+  return;
 }
 
 // Helper function to reset storm for new games
-void ResetStormConfiguration()
-{
-    WOW = 0;
-    LOG_("Storm configuration reset");
+void ResetStormConfiguration() {
+  WOW = 0;
+  LOG_("Storm configuration reset");
 }
