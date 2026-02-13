@@ -401,7 +401,7 @@ namespace BotSystem
                 return false;
 
             // Use global GetStatics and GetWorld functions from framework.h
-            auto CurrentTime = ::GetStatics()->GetTimeSeconds(::GetWorld());
+            auto CurrentTime = GetStatics()->GetTimeSeconds(GetWorld());
             if (CurrentTime - LastSpawnTime < SpawnInterval)
                 return false;
 
@@ -417,7 +417,7 @@ namespace BotSystem
             NewBot.Name = GetRandomName();
             NewBot.Config = GenerateRandomConfig();
             NewBot.CurrentState = EBotCombatState::Looting;
-            NewBot.LastActionTime = ::GetStatics()->GetTimeSeconds(::GetWorld());
+            NewBot.LastActionTime = GetStatics()->GetTimeSeconds(GetWorld());
             NewBot.StateChangeCooldown = 2.0f + FloatDist(RNG) * 3.0f;
             NewBot.Kills = 0;
             NewBot.Deaths = 0;
@@ -428,7 +428,7 @@ namespace BotSystem
             NewBot.TargetEnemy = nullptr;
 
             Bots.push_back(NewBot);
-            LastSpawnTime = ::GetStatics()->GetTimeSeconds(::GetWorld());
+            LastSpawnTime = GetStatics()->GetTimeSeconds(GetWorld());
 
             LOG_("Spawned bot: {} (Personality: {}, Difficulty: {})",
                  NewBot.Name,
@@ -469,7 +469,7 @@ namespace BotSystem
                 return;
 
             // Use global GetStatics and GetWorld functions from framework.h
-            auto CurrentTime = ::GetStatics()->GetTimeSeconds(::GetWorld());
+            auto CurrentTime = GetStatics()->GetTimeSeconds(GetWorld());
 
             // Check if we should change state
             if (CurrentTime - Bot.LastActionTime >= Bot.StateChangeCooldown)
@@ -555,7 +555,7 @@ namespace BotSystem
             float NearestDistance = FLT_MAX;
 
             // Use global GetGameState function from framework.h
-            auto GameState = ::GetGameState();
+            auto GameState = GetGameState();
             if (!GameState)
                 return nullptr;
 
@@ -622,9 +622,7 @@ namespace BotSystem
             // Calculate rotation to aim at target
             // FindLookAtRotation takes non-const references, so create temporary non-const variables
             SDK::FVector BotLocation = Bot.Pawn->K2_GetActorLocation();
-            SDK::FVector TempStart = BotLocation;
-            SDK::FVector TempTarget = AimLocation;
-            SDK::FRotator AimRotation = GetMath()->FindLookAtRotation(TempStart, TempTarget);
+            SDK::FRotator AimRotation = SDK::UKismetMathLibrary::FindLookAtRotation(BotLocation, AimLocation);
             Bot.Pawn->K2_SetActorRotation(AimRotation, false);
         }
 

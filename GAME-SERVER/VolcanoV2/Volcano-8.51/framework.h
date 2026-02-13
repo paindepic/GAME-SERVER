@@ -16,6 +16,15 @@
 static std::ofstream AAAA("FortniteLogs.log");
 #define LOG_(...) { std::cout << "VolcanoV2 : " << std::format(__VA_ARGS__) << std::endl; AAAA << std::format(__VA_ARGS__) << std::endl; }
 
+// Forward declarations for global helper functions used by bot system
+class UGameplayStatics;
+class UWorld;
+class AFortGameStateAthena;
+
+UGameplayStatics* GetStatics();
+UWorld* GetWorld();
+AFortGameStateAthena* GetGameState();
+
 // Forward declaration for bot system update
 namespace BotSystem
 {

@@ -25,7 +25,7 @@ namespace BotSystem
         struct FBuildRequest
         {
             SDK::FVector Location;
-            FRotator Rotation;
+            SDK::FRotator Rotation;
             EBuildType Type;
             bool bImmediate;
             int Priority;
@@ -228,15 +228,12 @@ namespace BotSystem
 
                 // FindLookAtRotation expects non-const references
                 SDK::FVector BotLocation = Bot.Pawn->K2_GetActorLocation();
-                FRotator AimRot = GetMath()->FindLookAtRotation(
-                    BotLocation,
-                    AimPos
-                );
+                SDK::FRotator AimRot = SDK::UKismetMathLibrary::FindLookAtRotation(BotLocation, AimPos);
 
                 // Smooth rotation for natural feel
                 float RotationSpeed = 5.0f + static_cast<float>(static_cast<int>(Bot.Config.Difficulty)) * 5.0f;
                 auto CurrentRot = Bot.Pawn->K2_GetActorRotation();
-                AimRot = GetMath()->RInterpTo(CurrentRot, AimRot, 0.016f, RotationSpeed);
+                AimRot = SDK::UKismetMathLibrary::RInterpTo(CurrentRot, AimRot, 0.016f, RotationSpeed);
 
                 Bot.Pawn->K2_SetActorRotation(AimRot, false);
 
@@ -392,12 +389,12 @@ namespace BotSystem
             FVectorHelpers::Normalize(MoveDirection);
 
             // Calculate rotation to face movement direction
-            FRotator MoveRotation = GetMath()->FindLookAtRotation(CurrentLocation, Target);
+            SDK::FRotator MoveRotation = SDK::UKismetMathLibrary::FindLookAtRotation(CurrentLocation, Target);
 
             // Smooth rotation
             auto CurrentRot = Bot.Pawn->K2_GetActorRotation();
             float RotationSpeed = 10.0f;
-            MoveRotation = GetMath()->RInterpTo(CurrentRot, MoveRotation, 0.016f, RotationSpeed);
+            MoveRotation = SDK::UKismetMathLibrary::RInterpTo(CurrentRot, MoveRotation, 0.016f, RotationSpeed);
 
             Bot.Pawn->K2_SetActorRotation(MoveRotation, false);
 
