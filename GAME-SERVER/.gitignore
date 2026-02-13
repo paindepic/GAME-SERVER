@@ -1,0 +1,44 @@
+# Build outputs
+*.dll
+*.exe
+*.lib
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exp
+*.log
+
+# Visual Studio
+.vs/
+*.vcxproj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build directories
+Debug/
+Release/
+x64/
+Win32/
+Build/
+bin/
+obj/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+FortniteLogs.log
