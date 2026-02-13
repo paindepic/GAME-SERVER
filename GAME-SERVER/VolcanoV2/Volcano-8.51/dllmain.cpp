@@ -97,9 +97,9 @@ DWORD Main(LPVOID)
     InitPawnHooks();
     InitVehicleHooks();
 
-    // Initialize Bot System
+    // Initialize Bot System with lobby visibility
     BotSystem::InitializeBotSystem();
-    LOG_("Bot System initialized with 350+ unique names and advanced AI behaviors!");
+    LOG_("Bot System initialized: 350+ names, 28 skins, lobby visibility enabled!");
 
 
 

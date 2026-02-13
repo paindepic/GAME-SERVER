@@ -179,6 +179,45 @@ namespace BotSystem
         float FleeThreshold;         // health percentage to flee
     };
 
+    // Common Fortnite Season 8.51 skins for bots
+    static const std::vector<std::string> BotSkinAssets = {
+        // Default/Free skins
+        "/Game/Athena/Heroes/Blueprints/HID_001_Athena_Commando_F.HID_001_Athena_Commando_F",
+        "/Game/Athena/Heroes/Blueprints/HID_002_Athena_Commando_F.HID_002_Athena_Commando_F",
+        "/Game/Athena/Heroes/Blueprints/HID_003_Athena_Commando_F.HID_003_Athena_Commando_F",
+        "/Game/Athena/Heroes/Blueprints/HID_004_Athena_Commando_F.HID_004_Athena_Commando_F",
+        "/Game/Athena/Heroes/Blueprints/HID_005_Athena_Commando_M.HID_005_Athena_Commando_M",
+        "/Game/Athena/Heroes/Blueprints/HID_006_Athena_Commando_M.HID_006_Athena_Commando_M",
+        "/Game/Athena/Heroes/Blueprints/HID_007_Athena_Commando_M.HID_007_Athena_Commando_M",
+        "/Game/Athena/Heroes/Blueprints/HID_008_Athena_Commando_M.HID_008_Athena_Commando_M",
+        
+        // Popular Season 8 skins
+        "/Game/Athena/Heroes/Blueprints/HID_013_Athena_Commando_F.HID_013_Athena_Commando_F", // Ramirez variant
+        "/Game/Athena/Heroes/Blueprints/HID_014_Athena_Commando_M.HID_014_Athena_Commando_M", // Jonesy variant
+        "/Game/Athena/Heroes/Blueprints/HID_015_Athena_Commando_F.HID_015_Athena_Commando_F", // Headhunter variant
+        "/Game/Athena/Heroes/Blueprints/HID_016_Athena_Commando_M.HID_016_Athena_Commando_M", // Hawk variant
+        "/Game/Athena/Heroes/Blueprints/HID_017_Athena_Commando_F.HID_017_Athena_Commando_F", // Wildcat variant
+        "/Game/Athena/Heroes/Blueprints/HID_018_Athena_Commando_M.HID_018_Athena_Commando_M", // Spitfire variant
+        "/Game/Athena/Heroes/Blueprints/HID_019_Athena_Commando_F.HID_019_Athena_Commando_F", // Banshee variant
+        "/Game/Athena/Heroes/Blueprints/HID_020_Athena_Commando_M.HID_020_Athena_Commando_M", // Renegade variant
+        
+        // More variety
+        "/Game/Athena/Heroes/Blueprints/HID_025_Athena_Commando_F.HID_025_Athena_Commando_F",
+        "/Game/Athena/Heroes/Blueprints/HID_026_Athena_Commando_M.HID_026_Athena_Commando_M",
+        "/Game/Athena/Heroes/Blueprints/HID_027_Athena_Commando_F.HID_027_Athena_Commando_F",
+        "/Game/Athena/Heroes/Blueprints/HID_028_Athena_Commando_M.HID_028_Athena_Commando_M",
+        "/Game/Athena/Heroes/Blueprints/HID_029_Athena_Commando_F.HID_029_Athena_Commando_F",
+        "/Game/Athena/Heroes/Blueprints/HID_030_Athena_Commando_M.HID_030_Athena_Commando_M",
+        
+        // Additional variants for diversity
+        "/Game/Athena/Heroes/Blueprints/HID_035_Athena_Commando_F.HID_035_Athena_Commando_F",
+        "/Game/Athena/Heroes/Blueprints/HID_036_Athena_Commando_M.HID_036_Athena_Commando_M",
+        "/Game/Athena/Heroes/Blueprints/HID_037_Athena_Commando_F.HID_037_Athena_Commando_F",
+        "/Game/Athena/Heroes/Blueprints/HID_038_Athena_Commando_M.HID_038_Athena_Commando_M",
+        "/Game/Athena/Heroes/Blueprints/HID_039_Athena_Commando_F.HID_039_Athena_Commando_F",
+        "/Game/Athena/Heroes/Blueprints/HID_040_Athena_Commando_M.HID_040_Athena_Commando_M"
+    };
+
     // Bot player data
     struct FBotPlayer
     {
@@ -186,6 +225,7 @@ namespace BotSystem
         SDK::AFortPawn* Pawn;
         SDK::AFortPlayerStateAthena* PlayerState;
         std::string Name;
+        std::string SkinAssetPath;  // Store assigned skin path
         FBotConfig Config;
         EBotCombatState CurrentState;
         EBotLobbyBehavior LobbyBehavior;
@@ -350,8 +390,8 @@ namespace BotSystem
             if (bInitialized)
                 return;
 
-            LOG_("Initializing Bot System...");
-            LOG_("Loaded {} unique bot names", BotNames.size());
+            LOG_("Initializing Bot System with lobby visibility...");
+            LOG_("Loaded {} unique bot names and {} skin variants", BotNames.size(), BotSkinAssets.size());
             bInitialized = true;
         }
 
@@ -464,6 +504,15 @@ namespace BotSystem
             return BotNames[NameDist(RNG)];
         }
 
+        std::string GetRandomSkinAsset()
+        {
+            if (BotSkinAssets.empty())
+                return "";
+            
+            std::uniform_int_distribution<int> SkinDist(0, static_cast<int>(BotSkinAssets.size()) - 1);
+            return BotSkinAssets[SkinDist(RNG)];
+        }
+
         bool CanSpawnBot()
         {
             if (!bInitialized)
@@ -495,6 +544,7 @@ namespace BotSystem
 
             FBotPlayer NewBot{};
             NewBot.Name = GetRandomName();
+            NewBot.SkinAssetPath = GetRandomSkinAsset();
             NewBot.Config = GenerateRandomConfig();
             NewBot.CurrentState = EBotCombatState::Looting;
             NewBot.LobbyBehavior = EBotLobbyBehavior::Idle;
@@ -556,6 +606,22 @@ namespace BotSystem
                 uint8 OldTeamIndex = BotPlayerState->TeamIndex;
                 BotPlayerState->TeamIndex = static_cast<uint8>(BotTeamIndex++);
                 BotPlayerState->OnRep_TeamIndex(OldTeamIndex);
+
+                // Apply random skin to bot for lobby visibility
+                if (!NewBot.SkinAssetPath.empty())
+                {
+                    auto HeroType = StaticLoadObject<SDK::UFortHeroType>(NewBot.SkinAssetPath);
+                    if (HeroType)
+                    {
+                        BotPlayerState->HeroType = HeroType;
+                        BotPlayerState->OnRep_HeroType();
+                        LOG_("Applied skin {} to bot {}", NewBot.SkinAssetPath, NewBot.Name);
+                    }
+                    else
+                    {
+                        LOG_("Failed to load skin {} for bot {}", NewBot.SkinAssetPath, NewBot.Name);
+                    }
+                }
             }
 
             // Create Pawn for the bot
@@ -589,6 +655,21 @@ namespace BotSystem
             if (BotPlayerState)
             {
                 BotPawn->PlayerState = BotPlayerState;
+                
+                // Apply cosmetic loadout to pawn for skin visibility
+                if (BotPlayerState->HeroType)
+                {
+                    auto FortPawn = static_cast<SDK::AFortPawn*>(BotPawn);
+                    if (FortPawn)
+                    {
+                        // Set the hero type in the pawn's cosmetic loadout
+                        FortPawn->CosmeticLoadout.Character = nullptr;  // Clear first
+                        FortPawn->OnRep_CosmeticLoadout();
+                        
+                        // Force update the pawn's appearance based on HeroType
+                        LOG_("Applied cosmetic loadout to bot pawn for {}", NewBot.Name);
+                    }
+                }
             }
             BotPawn->OnRep_Controller();
             BotPawn->OnRep_PlayerState();
@@ -650,12 +731,11 @@ namespace BotSystem
             Bots.push_back(NewBot);
             LastSpawnTime = Statics->GetTimeSeconds(World);
 
-            LOG_("Spawned bot: {} (Personality: {}, Difficulty: {}) - Controller: 0x{:x}, Pawn: 0x{:x}",
+            LOG_("Spawned lobby bot: {} with skin [{}] (Personality: {}, Difficulty: {})",
                  NewBot.Name,
+                 NewBot.SkinAssetPath,
                  static_cast<int>(NewBot.Config.Personality),
-                 static_cast<int>(NewBot.Config.Difficulty),
-                 reinterpret_cast<uintptr_t>(BotController),
-                 reinterpret_cast<uintptr_t>(BotPawn));
+                 static_cast<int>(NewBot.Config.Difficulty));
         }
 
         void Update(float DeltaTime)
@@ -675,8 +755,11 @@ namespace BotSystem
             }
 
             // Check game phase and update bot behaviors accordingly
-            bool bInWarmup = GameState->WarmupCountdownEndTime > GetStatics()->GetTimeSeconds(World);
-            bool bGameStarted = !bInWarmup && GameState->GamePhase >= EAthenaGamePhase::Aircraft;
+            // Warmup phase is EAthenaGamePhase::Warmup (value 2)
+            bool bInWarmup = (GameState->GamePhase == SDK::EAthenaGamePhase::Warmup) ||
+                             (GameState->GamePhase == SDK::EAthenaGamePhase::Setup) ||
+                             (GameState->WarmupCountdownEndTime > GetStatics()->GetTimeSeconds(World));
+            bool bGameStarted = GameState->GamePhase >= SDK::EAthenaGamePhase::Aircraft;
 
             // Update all bots
             for (auto& Bot : Bots)
