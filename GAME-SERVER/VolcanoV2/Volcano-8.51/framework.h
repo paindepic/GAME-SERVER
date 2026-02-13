@@ -9,7 +9,6 @@
 #include "discord.h"
 
 #include "minhook/MinHook.h"
-#pragma comment(lib, "minhook/minhook.lib")
 
 #include <fstream>
 
