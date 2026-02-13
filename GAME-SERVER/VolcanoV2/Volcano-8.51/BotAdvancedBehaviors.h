@@ -5,6 +5,313 @@
 
 namespace BotSystem
 {
+    // Lobby Behavior System for Bots
+    class FBotLobbySystem
+    {
+    public:
+        // Emote types for lobby
+        enum class ELobbyEmoteType
+        {
+            Dance,
+            Wave,
+            Cheer,
+            Point,
+            Sit
+        };
+
+        struct FLobbyAction
+        {
+            float Duration;
+            float Cooldown;
+            float Weight;  // Probability weight
+        };
+
+        static void ExecuteRandomLobbyBehavior(FBotPlayer& Bot, float DeltaTime)
+        {
+            if (!Bot.Pawn)
+                return;
+
+            // Get RNG from bot manager
+            auto& RNG = GBotManager->GetRNG();
+            auto& FloatDist = GBotManager->GetFloatDist();
+
+            // Randomly choose behavior based on weights
+            float RandomValue = FloatDist(RNG);
+            
+            if (RandomValue < 0.30f)
+            {
+                ExecuteDance(Bot, DeltaTime);
+            }
+            else if (RandomValue < 0.60f)
+            {
+                ExecuteWalk(Bot, DeltaTime);
+            }
+            else if (RandomValue < 0.80f)
+            {
+                ExecutePracticeAim(Bot, DeltaTime);
+            }
+            else if (RandomValue < 0.90f)
+            {
+                ExecuteEmote(Bot, DeltaTime);
+            }
+            else
+            {
+                ExecuteIdle(Bot, DeltaTime);
+            }
+        }
+
+        static void ExecuteDance(FBotPlayer& Bot, float DeltaTime)
+        {
+            if (!Bot.Pawn)
+                return;
+
+            auto& RNG = GBotManager->GetRNG();
+            auto& FloatDist = GBotManager->GetFloatDist();
+
+            // Simulate dancing with rotation oscillation
+            auto CurrentRot = Bot.Pawn->K2_GetActorRotation();
+            float Time = GetStatics()->GetTimeSeconds(GetWorld());
+            
+            // Different dance styles based on personality
+            switch (Bot.Config.Personality)
+            {
+                case EBotPersonality::Aggressive:
+                case EBotPersonality::Rusher:
+                    // Fast spinning dance
+                    CurrentRot.Yaw += std::sin(Time * 8.0f) * 30.0f * DeltaTime;
+                    break;
+                case EBotPersonality::Defensive:
+                case EBotPersonality::Camper:
+                    // Slow gentle sway
+                    CurrentRot.Yaw += std::sin(Time * 2.0f) * 5.0f * DeltaTime;
+                    break;
+                default:
+                    // Standard dance
+                    CurrentRot.Yaw += std::sin(Time * 5.0f) * 15.0f * DeltaTime;
+                    break;
+            }
+            
+            Bot.Pawn->K2_SetActorRotation(CurrentRot, false);
+        }
+
+        static void ExecuteWalk(FBotPlayer& Bot, float DeltaTime)
+        {
+            if (!Bot.Pawn)
+                return;
+
+            auto& RNG = GBotManager->GetRNG();
+            auto& FloatDist = GBotManager->GetFloatDist();
+
+            auto CurrentLocation = Bot.Pawn->K2_GetActorLocation();
+            
+            // If no target or reached target, pick new random target
+            SDK::FVector ToTarget = FVectorHelpers::operator-(Bot.TargetLocation, CurrentLocation);
+            float Distance = std::sqrt(ToTarget.X * ToTarget.X + ToTarget.Y * ToTarget.Y + ToTarget.Z * ToTarget.Z);
+            
+            if (Distance < 100.0f || Bot.TargetLocation.X == 0.0f)
+            {
+                // Pick new random target in lobby area
+                float Range = 1500.0f;
+                Bot.TargetLocation = SDK::FVector{
+                    (FloatDist(RNG) - 0.5f) * 2.0f * Range,
+                    (FloatDist(RNG) - 0.5f) * 2.0f * Range,
+                    CurrentLocation.Z
+                };
+                return;
+            }
+
+            // Move towards target
+            FVectorHelpers::Normalize(ToTarget);
+            float MoveSpeed = 250.0f * DeltaTime;
+            SDK::FVector NewLocation = FVectorHelpers::operator+(CurrentLocation, FVectorHelpers::operator*(ToTarget, MoveSpeed));
+            
+            // Face movement direction
+            SDK::FRotator NewRotation = GetMath()->FindLookAtRotation(CurrentLocation, Bot.TargetLocation);
+            Bot.Pawn->K2_TeleportTo(NewLocation, NewRotation);
+        }
+
+        static void ExecutePracticeAim(FBotPlayer& Bot, float DeltaTime)
+        {
+            if (!Bot.Pawn)
+                return;
+
+            auto& RNG = GBotManager->GetRNG();
+            auto& FloatDist = GBotManager->GetFloatDist();
+
+            auto CurrentRot = Bot.Pawn->K2_GetActorRotation();
+            
+            // Practice aiming with smooth movements
+            float AimSpeed = 2.0f * DeltaTime;
+            float TargetYaw = CurrentRot.Yaw + (FloatDist(RNG) - 0.5f) * 60.0f;
+            
+            // Smooth interpolation
+            float DeltaYaw = TargetYaw - CurrentRot.Yaw;
+            while (DeltaYaw > 180.0f) DeltaYaw -= 360.0f;
+            while (DeltaYaw < -180.0f) DeltaYaw += 360.0f;
+            
+            CurrentRot.Yaw += DeltaYaw * AimSpeed;
+            
+            // Occasionally look up/down
+            if (FloatDist(RNG) < 0.1f)
+            {
+                CurrentRot.Pitch = (FloatDist(RNG) - 0.5f) * 30.0f;
+            }
+            
+            Bot.Pawn->K2_SetActorRotation(CurrentRot, false);
+        }
+
+        static void ExecuteEmote(FBotPlayer& Bot, float DeltaTime)
+        {
+            if (!Bot.Pawn)
+                return;
+
+            auto CurrentRot = Bot.Pawn->K2_GetActorRotation();
+            
+            // Simple emote - spin around
+            CurrentRot.Yaw += 360.0f * DeltaTime;
+            Bot.Pawn->K2_SetActorRotation(CurrentRot, false);
+        }
+
+        static void ExecuteIdle(FBotPlayer& Bot, float DeltaTime)
+        {
+            // Occasional small movements to look alive
+            if (!Bot.Pawn)
+                return;
+
+            auto& RNG = GBotManager->GetRNG();
+            auto& FloatDist = GBotManager->GetFloatDist();
+
+            if (FloatDist(RNG) < 0.05f)  // 5% chance per tick
+            {
+                auto CurrentRot = Bot.Pawn->K2_GetActorRotation();
+                CurrentRot.Yaw += (FloatDist(RNG) - 0.5f) * 20.0f;
+                Bot.Pawn->K2_SetActorRotation(CurrentRot, false);
+            }
+        }
+    };
+
+    // Battle Bus System for Bots
+    class FBotBattleBusSystem
+    {
+    public:
+        struct FLandingProfile
+        {
+            float JumpDelay;        // Seconds after bus starts before jumping
+            float LandingSpeed;     // How fast to descend
+            bool bAggressiveLanding; // Land quickly vs glide slowly
+        };
+
+        static FLandingProfile GenerateLandingProfile(FBotPlayer& Bot)
+        {
+            FLandingProfile Profile{};
+            auto& RNG = GBotManager->GetRNG();
+            auto& FloatDist = GBotManager->GetFloatDist();
+
+            switch (Bot.Config.Personality)
+            {
+                case EBotPersonality::Aggressive:
+                case EBotPersonality::Rusher:
+                    // Jump early and land fast
+                    Profile.JumpDelay = 5.0f + FloatDist(RNG) * 10.0f;
+                    Profile.LandingSpeed = 1.5f;
+                    Profile.bAggressiveLanding = true;
+                    break;
+                case EBotPersonality::Strategic:
+                    // Wait and choose optimal landing
+                    Profile.JumpDelay = 15.0f + FloatDist(RNG) * 20.0f;
+                    Profile.LandingSpeed = 1.0f;
+                    Profile.bAggressiveLanding = false;
+                    break;
+                case EBotPersonality::Looter:
+                    // Land at less popular spots (handled by POI selection)
+                    Profile.JumpDelay = 20.0f + FloatDist(RNG) * 25.0f;
+                    Profile.LandingSpeed = 0.8f;
+                    Profile.bAggressiveLanding = false;
+                    break;
+                default:
+                    // Random timing
+                    Profile.JumpDelay = 5.0f + FloatDist(RNG) * 35.0f;
+                    Profile.LandingSpeed = 1.0f;
+                    Profile.bAggressiveLanding = FloatDist(RNG) > 0.5f;
+                    break;
+            }
+
+            return Profile;
+        }
+
+        static SDK::FVector CalculateLandingLocation(FBotPlayer& Bot)
+        {
+            if (POILocations.empty())
+                return SDK::FVector{0.0f, 0.0f, 1000.0f};
+
+            auto& RNG = GBotManager->GetRNG();
+            auto& FloatDist = GBotManager->GetFloatDist();
+
+            // Personality-based POI selection
+            const FPOILocation* SelectedPOI = nullptr;
+            
+            if (Bot.Config.Personality == EBotPersonality::Looter ||
+                Bot.Config.Personality == EBotPersonality::Strategic)
+            {
+                // Prefer less popular POIs
+                float MinPopularity = 1.0f;
+                for (const auto& POI : POILocations)
+                {
+                    if (POI.Popularity < MinPopularity)
+                    {
+                        MinPopularity = POI.Popularity;
+                        SelectedPOI = &POI;
+                    }
+                }
+            }
+            else if (Bot.Config.Personality == EBotPersonality::Aggressive ||
+                     Bot.Config.Personality == EBotPersonality::Rusher)
+            {
+                // Prefer hot drops (popular POIs)
+                float MaxPopularity = 0.0f;
+                for (const auto& POI : POILocations)
+                {
+                    if (POI.Popularity > MaxPopularity)
+                    {
+                        MaxPopularity = POI.Popularity;
+                        SelectedPOI = &POI;
+                    }
+                }
+            }
+            else
+            {
+                // Weighted random selection
+                float TotalWeight = 0.0f;
+                for (const auto& POI : POILocations)
+                {
+                    TotalWeight += POI.Popularity;
+                }
+                
+                float RandomValue = FloatDist(RNG) * TotalWeight;
+                float CurrentWeight = 0.0f;
+                
+                for (const auto& POI : POILocations)
+                {
+                    CurrentWeight += POI.Popularity;
+                    if (RandomValue <= CurrentWeight)
+                    {
+                        SelectedPOI = &POI;
+                        break;
+                    }
+                }
+            }
+
+            if (!SelectedPOI)
+                SelectedPOI = &POILocations[0];
+
+            // Add some randomness to landing spot
+            SDK::FVector LandingSpot = SelectedPOI->Location;
+            LandingSpot.X += (FloatDist(RNG) - 0.5f) * 300.0f;
+            LandingSpot.Y += (FloatDist(RNG) - 0.5f) * 300.0f;
+
+            return LandingSpot;
+        }
+    };
     // Advanced Building System for Bots
     class FBotBuildingSystem
     {

@@ -89,6 +89,12 @@ Handles movement, pathing, and natural motion.
 #### FBotDecisionSystem
 Makes strategic decisions based on game state and situation.
 
+#### FBotLobbySystem
+Handles lobby behaviors including dancing, walking, practice shooting, and emotes.
+
+#### FBotBattleBusSystem
+Manages battle bus behavior including jump timing and landing location selection.
+
 ## Compilation
 
 ### Prerequisites
@@ -185,9 +191,10 @@ If you encounter build errors:
 
 ### Runtime Issues
 
-1. **Bots not spawning**: Check that `InitializeBotSystem()` is called in Main()
-2. **Crash on injection**: Verify all hooks are properly set up
-3. **Performance issues**: Reduce max bots or increase spawn interval
+1. **Crash on injection**: Verify all hooks are properly set up
+2. **Bots not visible on minimap**: Check that GameState->PlayerArray is properly updated
+3. **Storm timer incorrect**: Ensure ResetStormConfiguration() is called at game start
+4. **Performance issues**: Reduce max bots or increase spawn interval
 
 ## Features Checklist
 
@@ -203,9 +210,24 @@ If you encounter build errors:
 - [x] Decision making system
 - [x] Project Reboot 3.0 compatibility
 
+### New in This Update
+- [x] **Actual Bot Spawning**: Bots now spawn as real game entities (Controller, Pawn, PlayerState)
+- [x] **Lobby Visibility**: Bots appear in lobby with player counter showing correct count
+- [x] **Minimap Visibility**: Bots are visible on the minimap with proper GameState registration
+- [x] **Lobby Behaviors**: 
+  - Dancing in lobby
+  - Walking around lobby
+  - Practice shooting in lobby
+  - Random emotes
+- [x] **Battle Bus Integration**:
+  - Bots jump from battle bus at different times
+  - Land at different POIs based on personality
+  - Strategic landing location selection
+- [x] **Storm Timer Fix**: Fixed storm timer showing 3 hours - now uses proper BR timing (5 min first zone, 3 min shrink)
+- [x] **24 Named POIs**: Bots can land at Tilted Towers, Pleasant Park, Retail Row, and 21 other locations
+
 ### Future Enhancements
 - [ ] Voice chat simulation
-- [ ] Emote usage
 - [ ] Team coordination
 - [ ] Learning AI (machine learning)
 - [ ] Custom bot skins

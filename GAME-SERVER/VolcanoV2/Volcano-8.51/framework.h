@@ -459,27 +459,82 @@ void (*SetMegaStormStuffidkREALOG)(AFortGameModeAthena*, int);
 void SetMegaStormStuffHOOK(AFortGameModeAthena* a1, int a2)
 {
     LOG_("a2: {}", a2);
-    if (!Globals::bLategame)
-        return SetMegaStormStuffidkREALOG(a1, a2);
-
+    
+    // Call original function first
     SetMegaStormStuffidkREALOG(a1, a2);
 
     auto GameState = GetGameState();
-    if (GameState)
-    {
-        LOG_("logggggg 1");
+    if (!GameState || !GameState->SafeZoneIndicator)
+        return;
 
+    float CurrentTime = GetStatics()->GetTimeSeconds(GetWorld());
+    
+    // Battle Royale Storm Timing Configuration
+    // These values match standard BR timing (not 3 hours)
+    const float FirstZoneDelay = 300.0f;      // 5 minutes before first zone starts
+    const float ZoneShrinkTime = 180.0f;      // 3 minutes to shrink
+    const float ZoneWaitTime = 120.0f;        // 2 minutes between zones
+    
+    if (Globals::bLategame)
+    {
+        LOG_("Lategame mode - configuring fast storm");
+        // Lategame: Fast storm for quick matches
         if (WOW < 4)
         {
-            GameState->SafeZoneIndicator->SafeZoneStartShrinkTime = GetStatics()->GetTimeSeconds(GetWorld()) + 0.f;
-            GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameState->SafeZoneIndicator->SafeZoneStartShrinkTime + 0.f;
+            GameState->SafeZoneIndicator->SafeZoneStartShrinkTime = CurrentTime + 10.0f;
+            GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameState->SafeZoneIndicator->SafeZoneStartShrinkTime + 60.0f;
         }
-        if (WOW == 3) // WOW
+        if (WOW == 3)
         {
-            GameState->SafeZoneIndicator->SafeZoneStartShrinkTime = GetStatics()->GetTimeSeconds(GetWorld()) + 30.f;
+            GameState->SafeZoneIndicator->SafeZoneStartShrinkTime = CurrentTime + 30.0f;
         }
-        WOW++;
     }
+    else
+    {
+        LOG_("Standard BR mode - configuring storm timing");
+        // Standard BR timing
+        if (WOW == 0)
+        {
+            // First zone - wait 5 minutes then shrink for 3 minutes
+            GameState->SafeZoneIndicator->SafeZoneStartShrinkTime = CurrentTime + FirstZoneDelay;
+            GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameState->SafeZoneIndicator->SafeZoneStartShrinkTime + ZoneShrinkTime;
+        }
+        else if (WOW < 9)  // 9 total zones
+        {
+            // Subsequent zones - wait 2 minutes then shrink (shrink time decreases)
+            float ShrinkTime = ZoneShrinkTime - (WOW * 15.0f);  // Each zone shrinks faster
+            if (ShrinkTime < 60.0f) ShrinkTime = 60.0f;  // Minimum 1 minute
+            
+            GameState->SafeZoneIndicator->SafeZoneStartShrinkTime = CurrentTime + ZoneWaitTime;
+            GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameState->SafeZoneIndicator->SafeZoneStartShrinkTime + ShrinkTime;
+        }
+        
+        // Set storm damage values
+        GameState->SafeZoneIndicator->DamageType = EAthenaSafeZoneDamageType::Storm;
+        
+        // Set initial radius based on zone number
+        float BaseRadius = 20000.0f;  // Starting radius
+        float CurrentRadius = BaseRadius * std::pow(0.5f, static_cast<float>(WOW));
+        if (CurrentRadius < 1000.0f) CurrentRadius = 1000.0f;  // Minimum radius
+        
+        GameState->SafeZoneIndicator->Radius = CurrentRadius;
+        GameState->SafeZoneIndicator->NextRadius = CurrentRadius * 0.5f;
+    }
+    
+    WOW++;
+    
+    LOG_("Storm Zone {} configured - Start: {:.1f}s, Finish: {:.1f}s, Radius: {:.1f}",
+         WOW,
+         GameState->SafeZoneIndicator->SafeZoneStartShrinkTime - CurrentTime,
+         GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime - CurrentTime,
+         GameState->SafeZoneIndicator->Radius);
 
     return;
+}
+
+// Helper function to reset storm for new games
+void ResetStormConfiguration()
+{
+    WOW = 0;
+    LOG_("Storm configuration reset");
 }
