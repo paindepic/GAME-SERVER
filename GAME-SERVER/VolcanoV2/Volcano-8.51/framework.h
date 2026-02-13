@@ -8,7 +8,7 @@
 
 #include "discord.h"
 
-#include "minhook/MinHook.h"
+#include "MinHook.h"
 #include <fstream>
 
 static std::ofstream AAAA("FortniteLogs.log");
