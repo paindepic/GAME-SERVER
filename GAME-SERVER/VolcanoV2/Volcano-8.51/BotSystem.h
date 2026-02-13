@@ -574,8 +574,7 @@ namespace BotSystem
 
             for (int i = 0; i < GameState->PlayerArray.Num(); i++)
             {
-                auto PlayerState = decltype(GameState->PlayerArray[i]){};
-                PlayerState = GameState->PlayerArray[i];
+                auto PlayerState = GameState->PlayerArray[i];
                 if (!PlayerState)
                     continue;
 
