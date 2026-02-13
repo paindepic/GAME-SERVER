@@ -2,24 +2,24 @@
 #include "framework.h"
 
 static __int64 (*Fgameplauyabilirtyspecctor)(void*, void*, char, int, void*) = decltype(Fgameplauyabilirtyspecctor)(GetOffsetBRUH(0x868290));
-static __int64* (*GiveAbility)(void*, void*, FGameplayAbilitySpec a3) = decltype(GiveAbility)(GetOffsetBRUH(0x843DF0));
+static __int64* (*GiveAbility)(void*, void*, SDK::FGameplayAbilitySpec a3) = decltype(GiveAbility)(GetOffsetBRUH(0x843DF0));
 static char (*InternalTryActivateAbility)(
-	UAbilitySystemComponent* a1,
-	FGameplayAbilitySpecHandle a2,
-	FPredictionKey a3,
-	UGameplayAbility** a4,
+	SDK::UAbilitySystemComponent* a1,
+	SDK::FGameplayAbilitySpecHandle a2,
+	SDK::FPredictionKey a3,
+	SDK::UGameplayAbility** a4,
 	void* a5,
-	FGameplayEventData* a6) = decltype(InternalTryActivateAbility)(GetOffsetBRUH(0x8455D0));
+	SDK::FGameplayEventData* a6) = decltype(InternalTryActivateAbility)(GetOffsetBRUH(0x8455D0));
 
 // https://github.com/EpicGames/UnrealEngine/blob/463443057fb97f1af0d2951705324ce8818d2a55/Engine/Plugins/Runtime/GameplayAbilities/Source/GameplayAbilities/Private/AbilitySystemComponent_Abilities.cpp#L250C1-L250C98
-FGameplayAbilitySpec* GrantAbility(AFortPlayerStateAthena* PlayerState, UClass* AbilityClass, UObject* SourceObj = nullptr, bool ActivateOnce = false)
+SDK::FGameplayAbilitySpec* GrantAbility(SDK::AFortPlayerStateAthena* PlayerState, SDK::UClass* AbilityClass, SDK::UObject* SourceObj = nullptr, bool ActivateOnce = false)
 {
 	if (!PlayerState || !AbilityClass)
 		return nullptr;
 	if (!PlayerState->AbilitySystemComponent)
 		return nullptr;
 
-	FGameplayAbilitySpec TEST{};
+	SDK::FGameplayAbilitySpec TEST{};
 	Fgameplauyabilirtyspecctor(&TEST, AbilityClass->DefaultObject, 1, -1, SourceObj);
 	TEST.RemoveAfterActivation = ActivateOnce;
 
@@ -28,9 +28,9 @@ FGameplayAbilitySpec* GrantAbility(AFortPlayerStateAthena* PlayerState, UClass* 
 	return &TEST;
 }
 
-void GrantAbilitySet(AFortPlayerStateAthena* bbg, UFortAbilitySet* Set = nullptr)
+void GrantAbilitySet(SDK::AFortPlayerStateAthena* bbg, SDK::UFortAbilitySet* Set = nullptr)
 {
-	static auto aaaREAL = UObject::FindObject<UFortAbilitySet>("GAS_AthenaPlayer.GAS_AthenaPlayer");
+	static auto aaaREAL = SDK::UObject::FindObject<SDK::UFortAbilitySet>("GAS_AthenaPlayer.GAS_AthenaPlayer");
 	auto AbilitySet = Set ? Set : aaaREAL;
 	if (AbilitySet)
 	{
@@ -42,7 +42,7 @@ void GrantAbilitySet(AFortPlayerStateAthena* bbg, UFortAbilitySet* Set = nullptr
 }
 
 // https://github.com/EpicGames/UnrealEngine/blob/463443057fb97f1af0d2951705324ce8818d2a55/Engine/Plugins/Runtime/GameplayAbilities/Source/GameplayAbilities/Private/AbilitySystemComponent_Abilities.cpp#L737
-FGameplayAbilitySpec* FindAbilitySpecFromHandle(UAbilitySystemComponent* AbilitySystemComponent, FGameplayAbilitySpecHandle Handle)
+SDK::FGameplayAbilitySpec* FindAbilitySpecFromHandle(SDK::UAbilitySystemComponent* AbilitySystemComponent, SDK::FGameplayAbilitySpecHandle Handle)
 {
 	for (int i = 0; i < AbilitySystemComponent->ActivatableAbilities.Items.Num(); i++)
 	{
@@ -56,9 +56,9 @@ FGameplayAbilitySpec* FindAbilitySpecFromHandle(UAbilitySystemComponent* Ability
 }
 
 // https://github.com/EpicGames/UnrealEngine/blob/463443057fb97f1af0d2951705324ce8818d2a55/Engine/Plugins/Runtime/GameplayAbilities/Source/GameplayAbilities/Private/AbilitySystemComponent_Abilities.cpp#L1754
-void InternalServerTryActivateAbilityHook(UAbilitySystemComponent* ASc, FGameplayAbilitySpecHandle Handle, bool InputPressed, const FPredictionKey& PredictionKey, FGameplayEventData* TriggerEventData)
+void InternalServerTryActivateAbilityHook(SDK::UAbilitySystemComponent* ASc, SDK::FGameplayAbilitySpecHandle Handle, bool InputPressed, const SDK::FPredictionKey& PredictionKey, SDK::FGameplayEventData* TriggerEventData)
 {
-	FGameplayAbilitySpec* Spec = FindAbilitySpecFromHandle(ASc, Handle);
+	SDK::FGameplayAbilitySpec* Spec = FindAbilitySpecFromHandle(ASc, Handle);
 	if (!Spec)
 	{
 		// Can potentially happen in race conditions where client tries to activate ability that is removed server side before it is received.
@@ -67,11 +67,11 @@ void InternalServerTryActivateAbilityHook(UAbilitySystemComponent* ASc, FGamepla
 		return;
 	}
 
-	const UGameplayAbility* AbilityToActivate = Spec->Ability;
+	const SDK::UGameplayAbility* AbilityToActivate = Spec->Ability;
 
 	// Consume any pending target info, to clear out cancels from old executions
 
-	UGameplayAbility* InstancedAbility = nullptr;
+	SDK::UGameplayAbility* InstancedAbility = nullptr;
 	Spec->InputPressed = true;
 
 	// Attempt to activate the ability (server side) and tell the client if it succeeded or failed.
@@ -93,5 +93,5 @@ void InitAbilities()
 {
 	// L skunky bozo if anyone wants abilities I need to get uabilitysystemcomponent start vtable index
 
-	VirtualHook(GetDefObj<UFortAbilitySystemComponentAthena>(), 0xF4, InternalServerTryActivateAbilityHook);
+	VirtualHook(GetDefObj<SDK::UFortAbilitySystemComponentAthena>(), 0xF4, InternalServerTryActivateAbilityHook);
 }

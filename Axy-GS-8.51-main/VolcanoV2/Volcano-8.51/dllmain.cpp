@@ -27,22 +27,22 @@ DWORD Main(LPVOID)
     LOG_("skidada!da!ad!dad!ad!a");
 
 
-    ((UKismetSystemLibrary*)UKismetSystemLibrary::StaticClass()->DefaultObject)->ExecuteConsoleCommand(GetWorld(), L"open Athena_Terrain", nullptr);
+    ((SDK::UKismetSystemLibrary*)SDK::UKismetSystemLibrary::StaticClass()->DefaultObject)->ExecuteConsoleCommand(GetWorld(), L"open Athena_Terrain", nullptr);
     GetEngine()->GameInstance->LocalPlayers.Remove(0);
 
-    void** VTAblAAAA = *(void***)GetDefObj<UAbilitySystemComponent>();
+    void** VTAblAAAA = *(void***)GetDefObj<SDK::UAbilitySystemComponent>();
     LOG_("aaaa: 0x{:x}", __int64(VTAblAAAA) - __int64(GetModuleHandleW(0)));
 
-    void** VFTYAYONG = *(void***)GetDefObj<AAthena_PlayerController_C>();
+    void** VFTYAYONG = *(void***)GetDefObj<SDK::AAthena_PlayerController_C>();
     LOG_("pc vft: 0x{:x}", __int64(VFTYAYONG) - __int64(GetModuleHandleW(0)));
 
-    void** TESTSETESTEST = *(void***)GetDefObj<AFortGameSessionDedicatedAthena>();
+    void** TESTSETESTEST = *(void***)GetDefObj<SDK::AFortGameSessionDedicatedAthena>();
     LOG_("gamesessionAthena vft: 0x{:x}", __int64(TESTSETESTEST) - __int64(GetModuleHandleW(0)));
 
-    void** WWGang = *(void***)GetDefObj<APlayerPawn_Athena_C>();
+    void** WWGang = *(void***)GetDefObj<SDK::APlayerPawn_Athena_C>();
     LOG_("PlayerPawn_Athena_C vft: 0x{:x}", __int64(WWGang) - __int64(GetModuleHandleW(0)));
 
-    void** cccc = *(void***)GetDefObj<UFortGameplayAbility>();
+    void** cccc = *(void***)GetDefObj<SDK::UFortGameplayAbility>();
     LOG_("UFortGameplayAbility vft: 0x{:x}", __int64(cccc) - __int64(GetModuleHandleW(0)));
 
     auto Addr = GetOffsetBRUH(0xFF343C);  // 0xFF343B // WARMUP CRASH

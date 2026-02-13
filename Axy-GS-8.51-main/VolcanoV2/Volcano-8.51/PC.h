@@ -13,11 +13,11 @@
 
 
 static void* (*sub_7FF6B99CFE30)(void*, void*) = decltype(sub_7FF6B99CFE30)(GetOffsetBRUH(0x175FE30));
-void ServerAcknowledgePossessionHook(AFortPlayerController* PC, APawn* P)
+void ServerAcknowledgePossessionHook(SDK::AFortPlayerController* PC, SDK::APawn* P)
 {
 	PC->AcknowledgedPawn = P;
 
-	auto PlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
+	auto PlayerState = (SDK::AFortPlayerStateAthena*)PC->PlayerState;
 	auto FortPawn = PC->MyFortPawn;
 	if (PlayerState && FortPawn)
 	{
@@ -39,12 +39,12 @@ void ServerAcknowledgePossessionHook(AFortPlayerController* PC, APawn* P)
 }
 
 // TODO: check the original
-void (*ServerReadyToStartMatchOG)(AController*);
-void ServerReadyToStartMatchHook(AFortPlayerController* PC)
+void (*ServerReadyToStartMatchOG)(SDK::AController*);
+void ServerReadyToStartMatchHook(SDK::AFortPlayerController* PC)
 {
 	if (PC)
 	{
-		auto PlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
+		auto PlayerState = (SDK::AFortPlayerStateAthena*)PC->PlayerState;
 		if (PlayerState)
 		{
 			GrantAbilitySet(PlayerState);
@@ -57,7 +57,7 @@ void ServerReadyToStartMatchHook(AFortPlayerController* PC)
 			Inventory::AddItem(PC, GetGameMode()->StartingItems[i].Item, GetGameMode()->StartingItems[i].Count);
 		}
 
-		static auto YAYA = UObject::FindObject<UAthenaPickaxeItemDefinition>("DefaultPickaxe.DefaultPickaxe");
+		static auto YAYA = SDK::UObject::FindObject<SDK::UAthenaPickaxeItemDefinition>("DefaultPickaxe.DefaultPickaxe");
 		auto& test = PC->CosmeticLoadoutPC;
 		if (test.Pickaxe)
 		{
@@ -123,23 +123,23 @@ void ServerReadyToStartMatchHook(AFortPlayerController* PC)
 	return ServerReadyToStartMatchOG(PC);
 }
 
-void ServerExecuteInventoryItem(AFortPlayerController* PC, FGuid& ItemGuid)
+void ServerExecuteInventoryItem(SDK::AFortPlayerController* PC, SDK::FGuid& ItemGuid)
 {
-	if (auto Pawn = (AFortPlayerPawn*)PC->Pawn)
+	if (auto Pawn = (SDK::AFortPlayerPawn*)PC->Pawn)
 	{
 		if (auto ItemEntry = Inventory::FindItemEntry(PC, ItemGuid))
 		{
-			Pawn->EquipWeaponDefinition((UFortWeaponItemDefinition*)ItemEntry->ItemDefinition, ItemEntry->ItemGuid);
+			Pawn->EquipWeaponDefinition((SDK::UFortWeaponItemDefinition*)ItemEntry->ItemDefinition, ItemEntry->ItemGuid);
 		}
 	}
 }
 
-static bool (*CantBuild)(UWorld*, UObject*, FVector, FRotator, char, void*, char*) = decltype(CantBuild)(GetOffsetBRUH(0x1330D70)); // 0x1330D70
-void ServerCreateBuildingActorHook(AFortPlayerControllerAthena* PC, FCreateBuildingActorData& CreateBuildingData)
+static bool (*CantBuild)(SDK::UWorld*, SDK::UObject*, SDK::FVector, SDK::FRotator, char, void*, char*) = decltype(CantBuild)(GetOffsetBRUH(0x1330D70)); // 0x1330D70
+void ServerCreateBuildingActorHook(SDK::AFortPlayerControllerAthena* PC, SDK::FCreateBuildingActorData& CreateBuildingData)
 {
 	// auto Class = PC->BroadcastRemoteClientInfo->RemoteBuildableClass.Get(); // 0x28D8
-	auto Class = (*(AFortBroadcastRemoteClientInfo**)(__int64(PC) + 0x28D8))->RemoteBuildableClass.Get();
-	TArray<AActor*> BuildingActorsToDestroy;
+	auto Class = (*(SDK::AFortBroadcastRemoteClientInfo**)(__int64(PC) + 0x28D8))->RemoteBuildableClass.Get();
+	SDK::TArray<SDK::AActor*> BuildingActorsToDestroy;
 	char Result;
 	if (!CantBuild(GetWorld(), Class, CreateBuildingData.BuildLoc, CreateBuildingData.BuildRot, CreateBuildingData.bMirrored, &BuildingActorsToDestroy, &Result))
 	{
@@ -149,13 +149,13 @@ void ServerCreateBuildingActorHook(AFortPlayerControllerAthena* PC, FCreateBuild
 		}
 		BuildingActorsToDestroy.Free();
 
-		if (auto NewBuilding = SpawnActor<ABuildingSMActor>(Class, CreateBuildingData.BuildLoc, CreateBuildingData.BuildRot))
+		if (auto NewBuilding = SpawnActor<SDK::ABuildingSMActor>(Class, CreateBuildingData.BuildLoc, CreateBuildingData.BuildRot))
 		{
 			NewBuilding->InitializeKismetSpawnedBuildingActor(NewBuilding, PC, true);
 			NewBuilding->bPlayerPlaced = true;
 			// *(uint8*)(__int64(NewBuilding) + 0x403) = ((AFortPlayerStateAthena*)PC->PlayerState)->TeamIndex;
-			NewBuilding->Team = EFortTeam(((AFortPlayerStateAthena*)PC->PlayerState)->TeamIndex);
-			NewBuilding->TeamIndex = ((AFortPlayerStateAthena*)PC->PlayerState)->TeamIndex;
+			NewBuilding->Team = SDK::EFortTeam(((SDK::AFortPlayerStateAthena*)PC->PlayerState)->TeamIndex);
+			NewBuilding->TeamIndex = ((SDK::AFortPlayerStateAthena*)PC->PlayerState)->TeamIndex;
 			NewBuilding->OnRep_Team();
 
 			if(!PC->bBuildFree)
@@ -164,29 +164,29 @@ void ServerCreateBuildingActorHook(AFortPlayerControllerAthena* PC, FCreateBuild
 	}
 }
 
-void ServerBeginEditingBuildingActorHook(AFortPlayerController* PC, ABuildingSMActor* BuildingActorToEdit)
+void ServerBeginEditingBuildingActorHook(SDK::AFortPlayerController* PC, SDK::ABuildingSMActor* BuildingActorToEdit)
 {
-	auto Pawn = (AFortPlayerPawnAthena*)PC->Pawn;
+	auto Pawn = (SDK::AFortPlayerPawnAthena*)PC->Pawn;
 	if (Pawn && BuildingActorToEdit)
 	{
-		static auto EditToolDef = StaticFindObject<UFortItemDefinition>("/Game/Items/Weapons/BuildingTools/EditTool.EditTool");
+		static auto EditToolDef = StaticFindObject<SDK::UFortItemDefinition>("/Game/Items/Weapons/BuildingTools/EditTool.EditTool");
 		if (Pawn->CurrentWeapon->WeaponData != EditToolDef)
 		{
 			if (auto EditToolEntry = Inventory::FindItemEntry(PC, EditToolDef))
 				PC->ServerExecuteInventoryItem(EditToolEntry->ItemGuid);
 		}
 
-		auto EditTool = (AFortWeap_EditingTool*)Pawn->CurrentWeapon;
+		auto EditTool = (SDK::AFortWeap_EditingTool*)Pawn->CurrentWeapon;
 		EditTool->EditActor = BuildingActorToEdit;
 		EditTool->OnRep_EditActor();
-		BuildingActorToEdit->EditingPlayer = (AFortPlayerStateAthena*)PC->PlayerState;
+		BuildingActorToEdit->EditingPlayer = (SDK::AFortPlayerStateAthena*)PC->PlayerState;
 		BuildingActorToEdit->OnRep_EditingPlayer();
 	}
 }
 
 // Idk about this offset theres 2 refs again but I think its the right one
-static ABuildingSMActor* (*ReplaceBuildingActorOG)(ABuildingSMActor*, char, UClass*, int, uint8, bool, AController*) = decltype(ReplaceBuildingActorOG)(GetOffsetBRUH(0x11252B0));
-void ServerEditBuildingActorHook(AFortPlayerController* PC, ABuildingSMActor* BuildingActorToEdit, UClass* NewBuildingClass, uint8 RotationIterations, bool bMirrored)
+static SDK::ABuildingSMActor* (*ReplaceBuildingActorOG)(SDK::ABuildingSMActor*, char, SDK::UClass*, int, uint8, bool, SDK::AController*) = decltype(ReplaceBuildingActorOG)(GetOffsetBRUH(0x11252B0));
+void ServerEditBuildingActorHook(SDK::AFortPlayerController* PC, SDK::ABuildingSMActor* BuildingActorToEdit, SDK::UClass* NewBuildingClass, uint8 RotationIterations, bool bMirrored)
 {
 	if (PC && BuildingActorToEdit && NewBuildingClass)
 	{
@@ -200,14 +200,14 @@ void ServerEditBuildingActorHook(AFortPlayerController* PC, ABuildingSMActor* Bu
 	}
 }
 
-void ServerEndEditingBuildingActorHook(AFortPlayerController* PC, ABuildingSMActor* BuildingActorToStopEditing)
+void ServerEndEditingBuildingActorHook(SDK::AFortPlayerController* PC, SDK::ABuildingSMActor* BuildingActorToStopEditing)
 {
 	if (PC && PC->Pawn && BuildingActorToStopEditing)
 	{
 		BuildingActorToStopEditing->EditingPlayer = nullptr;
 		BuildingActorToStopEditing->OnRep_EditingPlayer();
 
-		AFortWeap_EditingTool* EditTool = (AFortWeap_EditingTool*)((APlayerPawn_Athena_C*)PC->Pawn)->CurrentWeapon;
+		SDK::AFortWeap_EditingTool* EditTool = (SDK::AFortWeap_EditingTool*)((SDK::APlayerPawn_Athena_C*)PC->Pawn)->CurrentWeapon;
 		if (EditTool)
 		{
 			EditTool->bEditConfirmed = true;
@@ -217,18 +217,18 @@ void ServerEndEditingBuildingActorHook(AFortPlayerController* PC, ABuildingSMAct
 	}
 }
 
-void ServerClientIsReadyToRespawn(AFortPlayerControllerAthena* PC)
+void ServerClientIsReadyToRespawn(SDK::AFortPlayerControllerAthena* PC)
 {
-	auto PlayerState = (AFortPlayerStateAthena*)PC->PlayerState;
+	auto PlayerState = (SDK::AFortPlayerStateAthena*)PC->PlayerState;
 	auto& RespawnData = PlayerState->RespawnData;
 	if (RespawnData.bRespawnDataAvailable && RespawnData.bServerIsReady)
 	{
 		RespawnData.bClientIsReady = true;
 
-		FTransform Transform{};
+		SDK::FTransform Transform{};
 		Transform.Translation = RespawnData.RespawnLocation;
-		Transform.Scale3D = FVector{ 1,1,1 };
-		auto Pawn = (AFortPlayerPawnAthena*)GetGameMode()->SpawnDefaultPawnAtTransform(PC, Transform);
+		Transform.Scale3D = SDK::FVector{ 1,1,1 };
+		auto Pawn = (SDK::AFortPlayerPawnAthena*)GetGameMode()->SpawnDefaultPawnAtTransform(PC, Transform);
 		PC->Possess(Pawn);
 		Pawn->SetMaxHealth(100);
 		Pawn->SetHealth(100);
@@ -239,8 +239,8 @@ void ServerClientIsReadyToRespawn(AFortPlayerControllerAthena* PC)
 }
 
 // Test: 0x16E2230
-void (*GetPlayerViewPointOG)(AFortPlayerController* a1, FVector a2, FRotator a3);
-void GetPlayerViewPointHook(AFortPlayerController* a1, FVector& a2, FRotator& a3)
+void (*GetPlayerViewPointOG)(SDK::AFortPlayerController* a1, SDK::FVector a2, SDK::FRotator a3);
+void GetPlayerViewPointHook(SDK::AFortPlayerController* a1, SDK::FVector& a2, SDK::FRotator& a3)
 {
 	if (auto Pawn = a1->Pawn)
 	{
@@ -263,8 +263,8 @@ DWORD ThreadTEST(LPVOID)
 	return 1;
 }
 
-void (*EnterAircraft)(AFortPlayerController* a1, unsigned __int64 AircraftProbably);
-void EnterAircraftHook(AFortPlayerControllerAthena* a1, unsigned __int64 a2)
+void (*EnterAircraft)(SDK::AFortPlayerController* a1, unsigned __int64 AircraftProbably);
+void EnterAircraftHook(SDK::AFortPlayerControllerAthena* a1, unsigned __int64 a2)
 {
 	UptimeWebHook.send_embed("Match has started!", "**BattleBus launched!**");
 
@@ -285,9 +285,9 @@ void EnterAircraftHook(AFortPlayerControllerAthena* a1, unsigned __int64 a2)
 		LOG_("TEST: num safe zones locations {}", GetGameMode()->SafeZoneLocations.Num());
 
 		Aircraft->FlightInfo.FlightSpeed = 0.01f;
-		FVector Loc = GetGameMode()->SafeZoneLocations[4];
+		SDK::FVector Loc = GetGameMode()->SafeZoneLocations[4];
 		Loc.Z = 19000;
-		Aircraft->FlightInfo.FlightStartLocation = (FVector_NetQuantize100)Loc;
+		Aircraft->FlightInfo.FlightStartLocation = (SDK::FVector_NetQuantize100)Loc;
 
 		Aircraft->FlightInfo.TimeTillFlightEnd = 10;
 		Aircraft->FlightInfo.TimeTillDropEnd = 10;
@@ -301,13 +301,13 @@ void EnterAircraftHook(AFortPlayerControllerAthena* a1, unsigned __int64 a2)
 
 	if (a1->WorldInventory)
 	{
-		std::vector<FGuid> ToDropGoodSir{};
+		std::vector<SDK::FGuid> ToDropGoodSir{};
 		auto InstancesPtr = &a1->WorldInventory->Inventory.ItemInstances;
 		for (int i = 0; i < InstancesPtr->Num(); i++)
 		{
 			if (InstancesPtr->operator[](i))
 			{
-				if (((UFortWorldItemDefinition*)InstancesPtr->operator[](i)->ItemEntry.ItemDefinition)->bCanBeDropped)
+				if (((SDK::UFortWorldItemDefinition*)InstancesPtr->operator[](i)->ItemEntry.ItemDefinition)->bCanBeDropped)
 				{
 					LOG_("REAL 1");
 					ToDropGoodSir.push_back(InstancesPtr->operator[](i)->ItemEntry.ItemGuid);
@@ -334,52 +334,52 @@ void EnterAircraftHook(AFortPlayerControllerAthena* a1, unsigned __int64 a2)
 			/// === Weapon Definitions ===
 
 			// Shotguns
-			static auto Pump1 = UObject::FindObject<UFortItemDefinition>("WID_Shotgun_Standard_Athena_UC_Ore_T03.WID_Shotgun_Standard_Athena_UC_Ore_T03");
-			static auto Pump2 = UObject::FindObject<UFortItemDefinition>("WID_Shotgun_Standard_Athena_VR_Ore_T03.WID_Shotgun_Standard_Athena_VR_Ore_T03");
-			static auto Pump3 = UObject::FindObject<UFortItemDefinition>("WID_Shotgun_Standard_Athena_SR_Ore_T03.WID_Shotgun_Standard_Athena_SR_Ore_T03");
-			static auto TacShotty = UObject::FindObject<UFortItemDefinition>("WID_Shotgun_SemiAuto_Athena_VR_Ore_T03.WID_Shotgun_SemiAuto_Athena_VR_Ore_T03");
-			static auto DoubleBarel1 = UObject::FindObject<UFortItemDefinition>("WID_Shotgun_BreakBarrel_Athena_VR_Ore_T03.WID_Shotgun_BreakBarrel_Athena_VR_Ore_T03");
-			static auto DoubleBarel2 = UObject::FindObject<UFortItemDefinition>("WID_Shotgun_BreakBarrel_Athena_SR_Ore_T03.WID_Shotgun_BreakBarrel_Athena_SR_Ore_T03");
-			static auto HeavyShotty1 = UObject::FindObject<UFortItemDefinition>("WID_Shotgun_SlugFire_Athena_VR.WID_Shotgun_SlugFire_Athena_VR");
-			static auto HeavyShotty2 = UObject::FindObject<UFortItemDefinition>("WID_Shotgun_SlugFire_Athena_SR.WID_Shotgun_SlugFire_Athena_SR");
+			static auto Pump1 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Shotgun_Standard_Athena_UC_Ore_T03.WID_Shotgun_Standard_Athena_UC_Ore_T03");
+			static auto Pump2 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Shotgun_Standard_Athena_VR_Ore_T03.WID_Shotgun_Standard_Athena_VR_Ore_T03");
+			static auto Pump3 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Shotgun_Standard_Athena_SR_Ore_T03.WID_Shotgun_Standard_Athena_SR_Ore_T03");
+			static auto TacShotty = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Shotgun_SemiAuto_Athena_VR_Ore_T03.WID_Shotgun_SemiAuto_Athena_VR_Ore_T03");
+			static auto DoubleBarel1 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Shotgun_BreakBarrel_Athena_VR_Ore_T03.WID_Shotgun_BreakBarrel_Athena_VR_Ore_T03");
+			static auto DoubleBarel2 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Shotgun_BreakBarrel_Athena_SR_Ore_T03.WID_Shotgun_BreakBarrel_Athena_SR_Ore_T03");
+			static auto HeavyShotty1 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Shotgun_SlugFire_Athena_VR.WID_Shotgun_SlugFire_Athena_VR");
+			static auto HeavyShotty2 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Shotgun_SlugFire_Athena_SR.WID_Shotgun_SlugFire_Athena_SR");
 
 
 			// ARs / SMGs
-			static auto AR1 = UObject::FindObject<UFortItemDefinition>("WID_Assault_AutoHigh_Athena_VR_Ore_T03.WID_Assault_AutoHigh_Athena_VR_Ore_T03");
-			static auto AR2 = UObject::FindObject<UFortItemDefinition>("WID_Assault_AutoHigh_Athena_SR_Ore_T03.WID_Assault_AutoHigh_Athena_SR_Ore_T03");
-			static auto AR3 = UObject::FindObject<UFortItemDefinition>("WID_Assault_Auto_Athena_R_Ore_T03.WID_Assault_Auto_Athena_R_Ore_T03"); // blue but fr ts time yo
-			static auto DrumGun1 = UObject::FindObject<UFortItemDefinition>("WID_Assault_AutoDrum_Athena_R_Ore_T03.WID_Assault_AutoDrum_Athena_R_Ore_T03");
-			static auto DrumGun2 = UObject::FindObject<UFortItemDefinition>("WID_Assault_AutoDrum_Athena_UC_Ore_T03.WID_Assault_AutoDrum_Athena_UC_Ore_T03");
-			static auto AK1 = UObject::FindObject<UFortItemDefinition>("WID_Assault_Heavy_Athena_R_Ore_T03.WID_Assault_Heavy_Athena_R_Ore_T03");
+			static auto AR1 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Assault_AutoHigh_Athena_VR_Ore_T03.WID_Assault_AutoHigh_Athena_VR_Ore_T03");
+			static auto AR2 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Assault_AutoHigh_Athena_SR_Ore_T03.WID_Assault_AutoHigh_Athena_SR_Ore_T03");
+			static auto AR3 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Assault_Auto_Athena_R_Ore_T03.WID_Assault_Auto_Athena_R_Ore_T03"); // blue but fr ts time yo
+			static auto DrumGun1 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Assault_AutoDrum_Athena_R_Ore_T03.WID_Assault_AutoDrum_Athena_R_Ore_T03");
+			static auto DrumGun2 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Assault_AutoDrum_Athena_UC_Ore_T03.WID_Assault_AutoDrum_Athena_UC_Ore_T03");
+			static auto AK1 = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Assault_Heavy_Athena_R_Ore_T03.WID_Assault_Heavy_Athena_R_Ore_T03");
 			
 
 			// Utils / Snipers
-			static auto Sniper = UObject::FindObject<UFortItemDefinition>("WID_Sniper_Heavy_Athena_VR_Ore_T03.WID_Sniper_Heavy_Athena_VR_Ore_T03");
-			static auto InfGrappler = UObject::FindObject<UFortItemDefinition>("WID_Hook_Gun_Slide.WID_Hook_Gun_Slide");
+			static auto Sniper = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Sniper_Heavy_Athena_VR_Ore_T03.WID_Sniper_Heavy_Athena_VR_Ore_T03");
+			static auto InfGrappler = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Hook_Gun_Slide.WID_Hook_Gun_Slide");
 			//static auto Grappler = UObject::FindObject<UFortItemDefinition>("WID_Hook_Gun_VR_Ore_T03.WID_Hook_Gun_VR_Ore_T03");
-			static auto FlintKnock = UObject::FindObject<UFortItemDefinition>("WID_Pistol_Flintlock_Athena_UC.WID_Pistol_Flintlock_Athena_UC");
-			static auto BoomBow = UObject::FindObject<UFortItemDefinition>("WID_ExplosiveBow_Athena_VR_SR.WID_ExplosiveBow_Athena_VR_SR");
+			static auto FlintKnock = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_Pistol_Flintlock_Athena_UC.WID_Pistol_Flintlock_Athena_UC");
+			static auto BoomBow = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WID_ExplosiveBow_Athena_VR_SR.WID_ExplosiveBow_Athena_VR_SR");
 
 
 			// Consumables
-			static auto BigShield = UObject::FindObject<UFortItemDefinition>("Athena_Shields.Athena_Shields");
-			static auto Minis = UObject::FindObject<UFortItemDefinition>("Athena_ShieldSmall.Athena_ShieldSmall");
-			static auto Medkit = UObject::FindObject<UFortItemDefinition>("Athena_Medkit.Athena_Medkit");
-			static auto Slurp = UObject::FindObject<UFortItemDefinition>("Athena_PurpleStuff.Athena_PurpleStuff");
+			static auto BigShield = SDK::UObject::FindObject<SDK::UFortItemDefinition>("Athena_Shields.Athena_Shields");
+			static auto Minis = SDK::UObject::FindObject<SDK::UFortItemDefinition>("Athena_ShieldSmall.Athena_ShieldSmall");
+			static auto Medkit = SDK::UObject::FindObject<SDK::UFortItemDefinition>("Athena_Medkit.Athena_Medkit");
+			static auto Slurp = SDK::UObject::FindObject<SDK::UFortItemDefinition>("Athena_PurpleStuff.Athena_PurpleStuff");
 
 			// Materials
-			static auto Wood = UObject::FindObject<UFortItemDefinition>("WoodItemData.WoodItemData");
-			static auto Brick = UObject::FindObject<UFortItemDefinition>("StoneItemData.StoneItemData");
-			static auto Metal = UObject::FindObject<UFortItemDefinition>("MetalItemData.MetalItemData");
+			static auto Wood = SDK::UObject::FindObject<SDK::UFortItemDefinition>("WoodItemData.WoodItemData");
+			static auto Brick = SDK::UObject::FindObject<SDK::UFortItemDefinition>("StoneItemData.StoneItemData");
+			static auto Metal = SDK::UObject::FindObject<SDK::UFortItemDefinition>("MetalItemData.MetalItemData");
 
 			// === Categorize pools ===
-			std::vector<UFortItemDefinition*> Shotguns = { Pump1, Pump2, Pump3, TacShotty, DoubleBarel1, DoubleBarel2, HeavyShotty1,HeavyShotty2 };
-			std::vector<UFortItemDefinition*> ARsSMGs = { AR1, AR2, AR3, DrumGun1, DrumGun2, AK1};
-			std::vector<UFortItemDefinition*> SnipersOrUtility = { Sniper, InfGrappler, BoomBow, /*Grappler,*/ FlintKnock};
-			std::vector<UFortItemDefinition*> Heals = { BigShield, Minis, Medkit, Slurp };
+			std::vector<SDK::UFortItemDefinition*> Shotguns = { Pump1, Pump2, Pump3, TacShotty, DoubleBarel1, DoubleBarel2, HeavyShotty1,HeavyShotty2 };
+			std::vector<SDK::UFortItemDefinition*> ARsSMGs = { AR1, AR2, AR3, DrumGun1, DrumGun2, AK1};
+			std::vector<SDK::UFortItemDefinition*> SnipersOrUtility = { Sniper, InfGrappler, BoomBow, /*Grappler,*/ FlintKnock};
+			std::vector<SDK::UFortItemDefinition*> Heals = { BigShield, Minis, Medkit, Slurp };
 
 			// Clean nulls
-			auto Clean = [](std::vector<UFortItemDefinition*>& pool)
+			auto Clean = [](std::vector<SDK::UFortItemDefinition*>& pool)
 				{
 					pool.erase(std::remove(pool.begin(), pool.end(), nullptr), pool.end());
 				};
@@ -389,22 +389,22 @@ void EnterAircraftHook(AFortPlayerControllerAthena* a1, unsigned __int64 a2)
 			Clean(Heals);
 
 			// Random picker
-			auto Pick = [](std::vector<UFortItemDefinition*>& pool) -> UFortItemDefinition*
+			auto Pick = [](std::vector<SDK::UFortItemDefinition*>& pool) -> SDK::UFortItemDefinition*
 				{
 					if (pool.empty()) return nullptr;
 					return pool[rand() % pool.size()];
 				};
 
 			// --- Random selections ---
-			UFortItemDefinition* Shotgun = Pick(Shotguns);
-			UFortItemDefinition* ARSMG = Pick(ARsSMGs);
-			UFortItemDefinition* SniperUtil = Pick(SnipersOrUtility);
+			SDK::UFortItemDefinition* Shotgun = Pick(Shotguns);
+			SDK::UFortItemDefinition* ARSMG = Pick(ARsSMGs);
+			SDK::UFortItemDefinition* SniperUtil = Pick(SnipersOrUtility);
 
-			UFortItemDefinition* Heal1 = Pick(Heals);
+			SDK::UFortItemDefinition* Heal1 = Pick(Heals);
 
 			// Remove Heal1 from pool to avoid duplicates
 			Heals.erase(std::remove(Heals.begin(), Heals.end(), Heal1), Heals.end());
-			UFortItemDefinition* Heal2 = Pick(Heals);
+			SDK::UFortItemDefinition* Heal2 = Pick(Heals);
 
 			// --- Give weapons with correct ammo ---
 			if (Shotgun)
@@ -433,7 +433,7 @@ void EnterAircraftHook(AFortPlayerControllerAthena* a1, unsigned __int64 a2)
 			}
 
 			// --- Give heals with correct stack counts ---
-			auto GetHealCount = [](UFortItemDefinition* Heal) -> int
+			auto GetHealCount = [](SDK::UFortItemDefinition* Heal) -> int
 				{
 					if (!Heal) return 1;
 					if (Heal == BigShield) return 2;
@@ -447,10 +447,10 @@ void EnterAircraftHook(AFortPlayerControllerAthena* a1, unsigned __int64 a2)
 			if (Heal2) Inventory::AddItem(a1, Heal2, GetHealCount(Heal2));
 
 			// --- Give ammo for each weapon type ---
-			auto GiveAmmo = [&](UFortItemDefinition* def)
+			auto GiveAmmo = [&](SDK::UFortItemDefinition* def)
 				{
 					if (!def) return;
-					if (auto W = Cast<UFortWeaponItemDefinition>(def))
+					if (auto W = Cast<SDK::UFortWeaponItemDefinition>(def))
 					{
 						auto Ammo = W->GetAmmoWorldItemDefinition_BP();
 						if (Ammo)
@@ -475,12 +475,12 @@ void EnterAircraftHook(AFortPlayerControllerAthena* a1, unsigned __int64 a2)
 
 // TEST
 void (*ServerSetTeam)(void*, uint8);
-void ServerSetTeamHook(AFortPlayerControllerAthena* PC, uint8 NewTeam)
+void ServerSetTeamHook(SDK::AFortPlayerControllerAthena* PC, uint8 NewTeam)
 {
 	ServerSetTeam(PC, NewTeam); // the original does pretty much as setting TeamIndex and respawning player probably well I just gotta update the gamememberinfoarray
 	LOG_("ServerSetTeam CALLED, {}", NewTeam);
 	// idk maybe check for SquadId
-	if (auto PlayerState = Cast<AFortPlayerStateAthena>(PC->PlayerState))
+	if (auto PlayerState = Cast<SDK::AFortPlayerStateAthena>(PC->PlayerState))
 	{
 
 		PlayerState->OnRep_TeamIndex(PlayerState->TeamIndex);
@@ -500,7 +500,7 @@ void ServerSetTeamHook(AFortPlayerControllerAthena* PC, uint8 NewTeam)
 				GetGameState()->GameMemberInfoArray.Members.Remove(i); // idk why crash tho if I just change it and call MarkItemDirty so skunky bozo
 				GetGameState()->GameMemberInfoArray.MarkArrayDirty();
 
-				FGameMemberInfo test{ -1,-1,-1 };
+				SDK::FGameMemberInfo test{ -1,-1,-1 };
 				test.TeamIndex = PlayerState->TeamIndex;
 				test.SquadId = PlayerState->SquadId;
 				test.MemberUniqueId = PlayerState->UniqueId;
@@ -514,25 +514,25 @@ void ServerSetTeamHook(AFortPlayerControllerAthena* PC, uint8 NewTeam)
 	return;
 }
 
-static void (*RemoveFromAlivePlayerOG)(void*, void*, void*, void*, void*, EDeathCause, char) = decltype(RemoveFromAlivePlayerOG)(GetOffsetBRUH(0xFAE8C0));
-void (*ClientOnPawnDiedOG)(AFortPlayerControllerZone* a1, FFortPlayerDeathReport a2);
-void ClientOnPawnDiedHook(AFortPlayerControllerZone* DeadPlayer, FFortPlayerDeathReport& DeathReport)
+static void (*RemoveFromAlivePlayerOG)(void*, void*, void*, void*, void*, SDK::EDeathCause, char) = decltype(RemoveFromAlivePlayerOG)(GetOffsetBRUH(0xFAE8C0));
+void (*ClientOnPawnDiedOG)(SDK::AFortPlayerControllerZone* a1, SDK::FFortPlayerDeathReport a2);
+void ClientOnPawnDiedHook(SDK::AFortPlayerControllerZone* DeadPlayer, SDK::FFortPlayerDeathReport& DeathReport)
 {
-	auto DeadPawn = (AFortPlayerPawnAthena*)DeadPlayer->Pawn;
-	auto DeadPlayerState = (AFortPlayerStateAthena*)DeadPlayer->PlayerState;
-	auto KillerPlayerState = (AFortPlayerStateAthena*)DeathReport.KillerPlayerState;
-	auto KillerPawn = (AFortPlayerPawnAthena*)DeathReport.KillerPawn;
+	auto DeadPawn = (SDK::AFortPlayerPawnAthena*)DeadPlayer->Pawn;
+	auto DeadPlayerState = (SDK::AFortPlayerStateAthena*)DeadPlayer->PlayerState;
+	auto KillerPlayerState = (SDK::AFortPlayerStateAthena*)DeathReport.KillerPlayerState;
+	auto KillerPawn = (SDK::AFortPlayerPawnAthena*)DeathReport.KillerPawn;
 
 	if (!DeadPawn || !DeadPlayerState)
 		return ClientOnPawnDiedOG(DeadPlayer, DeathReport);
 
-	EDeathCause DeathCause = DeadPlayerState->ToDeathCause(DeathReport.Tags, DeadPawn->bIsDBNO);
+	SDK::EDeathCause DeathCause = DeadPlayerState->ToDeathCause(DeathReport.Tags, DeadPawn->bIsDBNO);
 	DeadPlayerState->DeathInfo.bInitialized = true;
 	DeadPlayerState->DeathInfo.bDBNO = DeadPawn->bIsDBNO;
 	DeadPlayerState->DeathInfo.DeathCause = DeathCause;
 	DeadPlayerState->DeathInfo.FinisherOrDowner = KillerPlayerState ? KillerPlayerState : DeadPlayerState;
-	DeadPlayerState->DeathInfo.Distance = DeathCause == EDeathCause::FallDamage ? DeadPawn->LastFallDistance : DeadPawn->GetDistanceTo(KillerPawn);
-	DeadPlayerState->DeathInfo.DeathLocation = DeadPawn ? DeadPawn->K2_GetActorLocation() : FVector{};
+	DeadPlayerState->DeathInfo.Distance = DeathCause == SDK::EDeathCause::FallDamage ? DeadPawn->LastFallDistance : DeadPawn->GetDistanceTo(KillerPawn);
+	DeadPlayerState->DeathInfo.DeathLocation = DeadPawn ? DeadPawn->K2_GetActorLocation() : SDK::FVector{};
 
 	DeadPlayerState->PawnDeathLocation = DeadPlayerState->DeathInfo.DeathLocation;
 	DeadPlayerState->OnRep_DeathInfo();
@@ -560,16 +560,16 @@ void ClientOnPawnDiedHook(AFortPlayerControllerZone* DeadPlayer, FFortPlayerDeat
 				{
 					if (DeadPlayer->WorldInventory->Inventory.ItemInstances[i]->CanBeDropped())
 					{
-						SpawnPickup(DeadPlayer->WorldInventory->Inventory.ItemInstances[i]->ItemEntry, DeadPawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Player, EFortPickupSpawnSource::PlayerElimination);
+						SpawnPickup(DeadPlayer->WorldInventory->Inventory.ItemInstances[i]->ItemEntry, DeadPawn->K2_GetActorLocation(), SDK::EFortPickupSourceTypeFlag::Player, SDK::EFortPickupSpawnSource::PlayerElimination);
 					}
 				}
 			}
 
-			UFortItemDefinition* WeaponDef = nullptr;
+			SDK::UFortItemDefinition* WeaponDef = nullptr;
 			auto DamageCauser = DeathReport.DamageCauser;
 			if (DamageCauser)
 			{
-				if (auto WEAPON = Cast<AFortWeapon>(DamageCauser))
+				if (auto WEAPON = Cast<SDK::AFortWeapon>(DamageCauser))
 				{
 					WeaponDef = WEAPON->WeaponData;
 				}
@@ -582,28 +582,28 @@ void ClientOnPawnDiedHook(AFortPlayerControllerZone* DeadPlayer, FFortPlayerDeat
 	return ClientOnPawnDiedOG(DeadPlayer, DeathReport);
 }
 
-void ServerPlayEmoteItemHook(AFortPlayerControllerAthena* PC, UFortItemDefinition* EmoteAsset)
+void ServerPlayEmoteItemHook(SDK::AFortPlayerControllerAthena* PC, SDK::UFortItemDefinition* EmoteAsset)
 {
 	if (PC->IsInAircraft())
 		return; // tbh checking for PC->Pawn should do the same idk
 
-	if (auto Pawn = (APlayerPawn_Athena_C*)PC->Pawn)
+	if (auto Pawn = (SDK::APlayerPawn_Athena_C*)PC->Pawn)
 	{
-		if (auto DanceItemDefinition = Cast<UAthenaDanceItemDefinition>(EmoteAsset))
+		if (auto DanceItemDefinition = Cast<SDK::UAthenaDanceItemDefinition>(EmoteAsset))
 		{
 			LOG_("EMOTING !!!");
-			auto Granted = GrantAbility((AFortPlayerStateAthena*)PC->PlayerState, UGAB_Emote_Generic_C::StaticClass(), DanceItemDefinition, true);
+			auto Granted = GrantAbility((SDK::AFortPlayerStateAthena*)PC->PlayerState, SDK::UGAB_Emote_Generic_C::StaticClass(), DanceItemDefinition, true);
 
 			Pawn->bMovingEmote = DanceItemDefinition->bMovingEmote;
 			Pawn->bMovingEmoteForwardOnly = DanceItemDefinition->bMoveForwardOnly;
 			Pawn->EmoteWalkSpeed = DanceItemDefinition->WalkForwardSpeed;
 
-			((AFortPlayerStateAthena*)PC->PlayerState)->AbilitySystemComponent->ServerTryActivateAbility(Granted->Handle, Granted->InputPressed, Granted->ActivationInfo.PredictionKeyWhenActivated);
+			((SDK::AFortPlayerStateAthena*)PC->PlayerState)->AbilitySystemComponent->ServerTryActivateAbility(Granted->Handle, Granted->InputPressed, Granted->ActivationInfo.PredictionKeyWhenActivated);
 		}
 	}
 }
 
-void ServerAttemptInventoryDropHook(AFortPlayerController* PC, FGuid& ItemGuid, int32 Count)
+void ServerAttemptInventoryDropHook(SDK::AFortPlayerController* PC, SDK::FGuid& ItemGuid, int32 Count)
 {
 	if (auto Pawn = PC->Pawn)
 	{
@@ -612,20 +612,20 @@ void ServerAttemptInventoryDropHook(AFortPlayerController* PC, FGuid& ItemGuid, 
 			if (Count > ItemEntry->Count)
 				return;
 
-			auto Spawned = SpawnPickup(*ItemEntry, Pawn->K2_GetActorLocation(), EFortPickupSourceTypeFlag::Player, EFortPickupSpawnSource::Unset);
-			Spawned->PawnWhoDroppedPickup = (AFortPawn*)PC->Pawn;
+			auto Spawned = SpawnPickup(*ItemEntry, Pawn->K2_GetActorLocation(), SDK::EFortPickupSourceTypeFlag::Player, SDK::EFortPickupSpawnSource::Unset);
+			Spawned->PawnWhoDroppedPickup = (SDK::AFortPawn*)PC->Pawn;
 			Inventory::RemoveItem(PC, ItemEntry->ItemDefinition, Count);
 		}
 	}
 }
 
-void (*ServerAttemptInteractOG)(UFortControllerComponent_Interaction* Comp, AActor* ReceivingActor, UPrimitiveComponent* InteractComponent, ETInteractionType InteractType, __int64);
-void ServerAttemptInteractHook(UFortControllerComponent_Interaction* Comp, AActor* ReceivingActor, UPrimitiveComponent* InteractComponent, ETInteractionType InteractType, __int64 ssss)
+void (*ServerAttemptInteractOG)(SDK::UFortControllerComponent_Interaction* Comp, SDK::AActor* ReceivingActor, SDK::UPrimitiveComponent* InteractComponent, SDK::ETInteractionType InteractType, __int64);
+void ServerAttemptInteractHook(SDK::UFortControllerComponent_Interaction* Comp, SDK::AActor* ReceivingActor, SDK::UPrimitiveComponent* InteractComponent, SDK::ETInteractionType InteractType, __int64 ssss)
 {
-	auto PC = Cast<AFortPlayerController>(Comp->GetOwner());
+	auto PC = Cast<SDK::AFortPlayerController>(Comp->GetOwner());
 	if (PC)
 	{
-		if (auto Container = Cast<ABuildingContainer>(ReceivingActor))
+		if (auto Container = Cast<SDK::ABuildingContainer>(ReceivingActor))
 		{
 			auto ClassName = Container->Class->GetName();
 
@@ -637,21 +637,21 @@ void ServerAttemptInteractHook(UFortControllerComponent_Interaction* Comp, AActo
 			FVector bbb;
 			Container->StartBounceAnimation(0, 0, aa, bbb, EFortBounceType::Interact, false);*/
 
-			FVector Loc = Container->K2_GetActorLocation() + (Container->GetActorRightVector() * 44);
+			SDK::FVector Loc = Container->K2_GetActorLocation() + (Container->GetActorRightVector() * 44);
 			Loc.Z += 24;
 
 			std::vector<LootRow*> LOOT;
 			if (ClassName.contains("Chest"))
 			{
-				auto Weapon = GetRandomItem(EFortItemType::WeaponRanged);
+				auto Weapon = GetRandomItem(SDK::EFortItemType::WeaponRanged);
 
 				LootRow* AmmoRow = new LootRow();
-				auto Ammo = ((UFortWeaponItemDefinition*)Weapon->ItemDefinition)->GetAmmoWorldItemDefinition_BP();
+				auto Ammo = ((SDK::UFortWeaponItemDefinition*)Weapon->ItemDefinition)->GetAmmoWorldItemDefinition_BP();
 				AmmoRow->ItemDefinition = Ammo;
 				AmmoRow->DropCount = Ammo->DropCount;
 
-				auto Consumable = GetRandomItem(EFortItemType::Consumable);
-				auto WorldResource = GetRandomItem(EFortItemType::WorldResource);
+				auto Consumable = GetRandomItem(SDK::EFortItemType::Consumable);
+				auto WorldResource = GetRandomItem(SDK::EFortItemType::WorldResource);
 
 				LOOT.push_back(Weapon);
 				LOOT.push_back(AmmoRow);
@@ -661,13 +661,13 @@ void ServerAttemptInteractHook(UFortControllerComponent_Interaction* Comp, AActo
 			if (ClassName.contains("Ammo"))
 			{
 				if(rand() % 20 > 15)
-					LOOT.push_back(GetRandomItem(EFortItemType::Ammo));
-				LOOT.push_back(GetRandomItem(EFortItemType::Ammo));
+					LOOT.push_back(GetRandomItem(SDK::EFortItemType::Ammo));
+				LOOT.push_back(GetRandomItem(SDK::EFortItemType::Ammo));
 			}
 
 			for (auto& LootItem : LOOT)
 			{
-				SpawnPickup(LootItem->ItemDefinition, LootItem->DropCount, LootItem->LoadedAmmo, Loc, EFortPickupSourceTypeFlag::Container, EFortPickupSpawnSource::Unset);
+				SpawnPickup(LootItem->ItemDefinition, LootItem->DropCount, LootItem->LoadedAmmo, Loc, SDK::EFortPickupSourceTypeFlag::Container, SDK::EFortPickupSpawnSource::Unset);
 			}
 		}
 	}
@@ -699,8 +699,8 @@ void ServerAttemptInteractHook(UFortControllerComponent_Interaction* Comp, AActo
 //}
 
 // aaTest: 0x1003280
-void (*ExitAircraft)(AFortPlayerControllerAthena* a1);
-void ExitAircraftHook(AFortPlayerControllerAthena* a1)
+void (*ExitAircraft)(SDK::AFortPlayerControllerAthena* a1);
+void ExitAircraftHook(SDK::AFortPlayerControllerAthena* a1)
 {
 	if (a1)
 	{
@@ -709,14 +709,14 @@ void ExitAircraftHook(AFortPlayerControllerAthena* a1)
 		if (Globals::bLategame)
 		{
 			LOG_("LATEGAME!!!!");
-			FVector Loc = GetGameMode()->SafeZoneLocations[4];
+			SDK::FVector Loc = GetGameMode()->SafeZoneLocations[4];
 			Loc.Z = 19000;
-			FRotator Rot = a1->GetControlRotation();
+			SDK::FRotator Rot = a1->GetControlRotation();
 			if (a1->Pawn)
 			{
 				LOG_("VALID PANW LOL!");
 				a1->Pawn->K2_TeleportTo(Loc, Rot);
-				((AFortPawn*)a1->Pawn)->SetShield(100);
+				((SDK::AFortPawn*)a1->Pawn)->SetShield(100);
 			}
 		}
 
@@ -728,18 +728,18 @@ void ExitAircraftHook(AFortPlayerControllerAthena* a1)
 
 void InitHoksPC()
 {
-	VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x108, ServerAcknowledgePossessionHook);
-	VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x1FD, ServerExecuteInventoryItem);
-	VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x223, ServerCreateBuildingActorHook);
-	VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x22A, ServerBeginEditingBuildingActorHook);
-	VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x225, ServerEditBuildingActorHook);
-	VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x228, ServerEndEditingBuildingActorHook);
-	VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x1BC, ServerPlayEmoteItemHook);
-	VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x25F, ServerReadyToStartMatchHook, (void**)&ServerReadyToStartMatchOG);
-	VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x458, ServerClientIsReadyToRespawn);
-	VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x210, ServerAttemptInventoryDropHook);
-	VirtualHook(GetDefObj<UFortControllerComponent_Interaction>(), 0x80, ServerAttemptInteractHook, (void**)&ServerAttemptInteractOG);
-	VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x420, ServerSetTeamHook, (void**)&ServerSetTeam);
+	VirtualHook(GetDefObj<SDK::AAthena_PlayerController_C>(), 0x108, ServerAcknowledgePossessionHook);
+	VirtualHook(GetDefObj<SDK::AAthena_PlayerController_C>(), 0x1FD, ServerExecuteInventoryItem);
+	VirtualHook(GetDefObj<SDK::AAthena_PlayerController_C>(), 0x223, ServerCreateBuildingActorHook);
+	VirtualHook(GetDefObj<SDK::AAthena_PlayerController_C>(), 0x22A, ServerBeginEditingBuildingActorHook);
+	VirtualHook(GetDefObj<SDK::AAthena_PlayerController_C>(), 0x225, ServerEditBuildingActorHook);
+	VirtualHook(GetDefObj<SDK::AAthena_PlayerController_C>(), 0x228, ServerEndEditingBuildingActorHook);
+	VirtualHook(GetDefObj<SDK::AAthena_PlayerController_C>(), 0x1BC, ServerPlayEmoteItemHook);
+	VirtualHook(GetDefObj<SDK::AAthena_PlayerController_C>(), 0x25F, ServerReadyToStartMatchHook, (void**)&ServerReadyToStartMatchOG);
+	VirtualHook(GetDefObj<SDK::AAthena_PlayerController_C>(), 0x458, ServerClientIsReadyToRespawn);
+	VirtualHook(GetDefObj<SDK::AAthena_PlayerController_C>(), 0x210, ServerAttemptInventoryDropHook);
+	VirtualHook(GetDefObj<SDK::UFortControllerComponent_Interaction>(), 0x80, ServerAttemptInteractHook, (void**)&ServerAttemptInteractOG);
+	VirtualHook(GetDefObj<SDK::AAthena_PlayerController_C>(), 0x420, ServerSetTeamHook, (void**)&ServerSetTeam);
 	//VirtualHook(GetDefObj<AAthena_PlayerController_C>(), 0x433, ServerAttemptAircraftJump, (void**)&ServerAttemptAircraftJumpOG);
 
 	MH_CreateHook((LPVOID)GetOffsetBRUH(0x1003280), ExitAircraftHook, (void**)&ExitAircraft);

@@ -1,23 +1,23 @@
 #pragma once
 #include "Inventory.h"
 
-void (*o_OnDamageServer)(ABuildingActor*, float, FGameplayTagContainer, FVector, FHitResult, AActor*, AActor*, FGameplayEffectContextHandle);
-void h_OnDamageServer(ABuildingActor* Actor, float Damage, FGameplayTagContainer DamageTags, FVector Momentum, FHitResult HitInfo, AActor* InstigatedBy, AActor* DamageCauser, FGameplayEffectContextHandle a8)
+void (*o_OnDamageServer)(SDK::ABuildingActor*, float, SDK::FGameplayTagContainer, SDK::FVector, SDK::FHitResult, SDK::AActor*, SDK::AActor*, SDK::FGameplayEffectContextHandle);
+void h_OnDamageServer(SDK::ABuildingActor* Actor, float Damage, SDK::FGameplayTagContainer DamageTags, SDK::FVector Momentum, SDK::FHitResult HitInfo, SDK::AActor* InstigatedBy, SDK::AActor* DamageCauser, SDK::FGameplayEffectContextHandle a8)
 {
-	auto BuildingActor = Cast<ABuildingSMActor>(Actor);
+	auto BuildingActor = Cast<SDK::ABuildingSMActor>(Actor);
 	if (!BuildingActor)
 		return o_OnDamageServer(Actor, Damage, DamageTags, Momentum, HitInfo, InstigatedBy, DamageCauser, a8);
 
-	if (auto PC = Cast<AFortPlayerControllerAthena>(InstigatedBy))
+	if (auto PC = Cast<SDK::AFortPlayerControllerAthena>(InstigatedBy))
 	{
 		// the InstigatedBy is a playercontrollerAthena
-		if (auto Pawn = (AFortPlayerPawn*)PC->Pawn)
+		if (auto Pawn = (SDK::AFortPlayerPawn*)PC->Pawn)
 		{
 			if (!BuildingActor->bDestroyed && !BuildingActor->bPlayerPlaced)
 			{
-				if (auto Weapon = Cast<AFortWeapon>(DamageCauser))
+				if (auto Weapon = Cast<SDK::AFortWeapon>(DamageCauser))
 				{
-					if (Cast<UFortWeaponMeleeItemDefinition>(Weapon->WeaponData))
+					if (Cast<SDK::UFortWeaponMeleeItemDefinition>(Weapon->WeaponData))
 					{
 						bool WeakSpot = Damage == 100.f;
 						int ToGive = 0;
