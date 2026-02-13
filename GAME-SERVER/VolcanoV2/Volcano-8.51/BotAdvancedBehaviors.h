@@ -47,10 +47,10 @@ namespace BotSystem
         {
             // Build 4 walls around the bot
             std::vector<SDK::FVector> WallLocations = {
-                Center + SDK::FVector{300.0f, 0.0f, 0.0f},
-                Center + SDK::FVector{-300.0f, 0.0f, 0.0f},
-                Center + SDK::FVector{0.0f, 300.0f, 0.0f},
-                Center + SDK::FVector{0.0f, -300.0f, 0.0f}
+                FVectorHelpers::operator+(Center, SDK::FVector{300.0f, 0.0f, 0.0f}),
+                FVectorHelpers::operator+(Center, SDK::FVector{-300.0f, 0.0f, 0.0f}),
+                FVectorHelpers::operator+(Center, SDK::FVector{0.0f, 300.0f, 0.0f}),
+                FVectorHelpers::operator+(Center, SDK::FVector{0.0f, -300.0f, 0.0f})
             };
 
             for (const auto& Loc : WallLocations)
@@ -66,11 +66,11 @@ namespace BotSystem
 
         static void BuildRampPush(FBotPlayer& Bot, const SDK::FVector& Target)
         {
-            SDK::FVector Direction = Target - Bot.Pawn->K2_GetActorLocation();
+            SDK::FVector Direction = FVectorHelpers::operator-(Target, Bot.Pawn->K2_GetActorLocation());
             Direction.Z = 0;
             FVectorHelpers::Normalize(Direction);
 
-            SDK::FVector RampLocation = Bot.Pawn->K2_GetActorLocation() + Direction * 400.0f;
+            SDK::FVector RampLocation = FVectorHelpers::operator+(Bot.Pawn->K2_GetActorLocation(), FVectorHelpers::operator*(Direction, 400.0f));
 
             FBuildRequest Request{};
             Request.Location = RampLocation;
@@ -153,19 +153,21 @@ namespace BotSystem
             Decision.AimPosition = PredictEnemyPosition(Bot, Bot.TargetEnemy);
 
             // Decide based on distance and personality
+            float BotHealth = Bot.Pawn->GetHealth();
+            float BotMaxHealth = Bot.Pawn->GetMaxHealth();
             if (Distance < 500.0f && Bot.Config.Aggressiveness > 0.6f)
             {
                 // Shotgun range - aggressive
                 Decision.bShouldAttack = true;
                 Decision.bShouldBuild = Bot.GetPersonality() == EBotPersonality::Builder;
-                Decision.bShouldRetreat = Bot.Pawn->Health < Bot.Pawn->MaxHealth * 0.3f;
+                Decision.bShouldRetreat = BotHealth < BotMaxHealth * 0.3f;
             }
             else if (Distance < 1500.0f)
             {
                 // AR range
                 Decision.bShouldAttack = Bot.Config.Aggressiveness > 0.3f;
                 Decision.bShouldBuild = true;
-                Decision.bShouldRetreat = Bot.Pawn->Health < Bot.Pawn->MaxHealth * 0.4f;
+                Decision.bShouldRetreat = BotHealth < BotMaxHealth * 0.4f;
             }
             else if (Distance > 3000.0f)
             {
@@ -224,8 +226,10 @@ namespace BotSystem
                 AimPos.Y += (GBotManager->GetFloatDist()(GBotManager->GetRNG()) - 0.5f) * Inaccuracy;
                 AimPos.Z += (GBotManager->GetFloatDist()(GBotManager->GetRNG()) - 0.5f) * Inaccuracy * 0.3f;
 
+                // FindLookAtRotation expects non-const references
+                SDK::FVector BotLocation = Bot.Pawn->K2_GetActorLocation();
                 FRotator AimRot = GetMath()->FindLookAtRotation(
-                    Bot.Pawn->K2_GetActorLocation(),
+                    BotLocation,
                     AimPos
                 );
 
@@ -369,7 +373,7 @@ namespace BotSystem
                 return;
 
             auto CurrentLocation = Bot.Pawn->K2_GetActorLocation();
-            SDK::FVector Direction = Target - CurrentLocation;
+            SDK::FVector Direction = FVectorHelpers::operator-(Target, CurrentLocation);
             float Distance = std::sqrt(Direction.X * Direction.X + Direction.Y * Direction.Y + Direction.Z * Direction.Z);
 
             if (Distance < 50.0f)
@@ -408,7 +412,7 @@ namespace BotSystem
                 return;
 
             auto CurrentLocation = Bot.Pawn->K2_GetActorLocation();
-            SDK::FVector ToTarget = Target - CurrentLocation;
+            SDK::FVector ToTarget = FVectorHelpers::operator-(Target, CurrentLocation);
             ToTarget.Z = 0;
             FVectorHelpers::Normalize(ToTarget);
 
@@ -417,7 +421,7 @@ namespace BotSystem
 
             if (StrafeAmount != 0.0f)
             {
-                SDK::FVector MoveDirection = StrafeDir * StrafeAmount;
+                SDK::FVector MoveDirection = FVectorHelpers::operator*(StrafeDir, StrafeAmount);
                 // Bot.Controller->AddMovementInput(MoveDirection, 1.0f);
                 (void)MoveDirection; // Suppress unused warning
             }
@@ -453,13 +457,13 @@ namespace BotSystem
             auto PlayerLocation = Player->K2_GetActorLocation();
             auto BotLocation = Bot.Pawn->K2_GetActorLocation();
 
-            SDK::FVector ToPlayer = PlayerLocation - BotLocation;
+            SDK::FVector ToPlayer = FVectorHelpers::operator-(PlayerLocation, BotLocation);
             float Distance = std::sqrt(ToPlayer.X * ToPlayer.X + ToPlayer.Y * ToPlayer.Y + ToPlayer.Z * ToPlayer.Z);
 
             if (Distance > FollowDistance)
             {
                 FVectorHelpers::Normalize(ToPlayer);
-                SDK::FVector TargetPos = PlayerLocation - ToPlayer * FollowDistance;
+                SDK::FVector TargetPos = FVectorHelpers::operator-(PlayerLocation, FVectorHelpers::operator*(ToPlayer, FollowDistance));
                 MoveToLocation(Bot, TargetPos);
             }
         }

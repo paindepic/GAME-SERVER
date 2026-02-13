@@ -505,8 +505,10 @@ namespace BotSystem
 
         void DetermineNewState(FBotPlayer& Bot)
         {
-            // Get bot health
-            float HealthPercent = Bot.Pawn->Health / Bot.Pawn->MaxHealth;
+            // Get bot health using proper accessor methods
+            float Health = Bot.Pawn->GetHealth();
+            float MaxHealth = Bot.Pawn->GetMaxHealth();
+            float HealthPercent = MaxHealth > 0 ? Health / MaxHealth : 0.0f;
 
             // Check for nearby enemies
             auto NearestEnemy = FindNearestEnemy(Bot);
@@ -586,7 +588,7 @@ namespace BotSystem
                 FloatDist(RNG) * 4000.0f - 2000.0f,
                 0.0f
             );
-            Bot.TargetLocation = Bot.Pawn->K2_GetActorLocation() + RandomOffset;
+            Bot.TargetLocation = FVectorHelpers::operator+(Bot.Pawn->K2_GetActorLocation(), RandomOffset);
         }
 
         void ExecuteBuildingBehavior(FBotPlayer& Bot)
@@ -614,7 +616,8 @@ namespace BotSystem
             SDK::FVector AimLocation = EnemyLocation + InaccuracyOffset;
 
             // Calculate rotation to aim at target
-            FRotator AimRotation = GetMath()->FindLookAtRotation(Bot.Pawn->K2_GetActorLocation(), AimLocation);
+            SDK::FVector BotLocation = Bot.Pawn->K2_GetActorLocation();
+            FRotator AimRotation = GetMath()->FindLookAtRotation(BotLocation, AimLocation);
             Bot.Pawn->K2_SetActorRotation(AimRotation, false);
         }
 
@@ -624,11 +627,11 @@ namespace BotSystem
                 return;
 
             // Move away from enemy
-            SDK::FVector ToEnemy = Bot.TargetEnemy->K2_GetActorLocation() - Bot.Pawn->K2_GetActorLocation();
+            SDK::FVector ToEnemy = FVectorHelpers::operator-(Bot.TargetEnemy->K2_GetActorLocation(), Bot.Pawn->K2_GetActorLocation());
             FVectorHelpers::Normalize(ToEnemy);
 
-            SDK::FVector FleeDirection = FVectorHelpers::operator-(ToEnemy) * 2000.0f; // Move 2000 units away
-            Bot.TargetLocation = Bot.Pawn->K2_GetActorLocation() + FleeDirection;
+            SDK::FVector FleeDirection = FVectorHelpers::operator*(FVectorHelpers::operator-(ToEnemy), 2000.0f); // Move 2000 units away
+            Bot.TargetLocation = FVectorHelpers::operator+(Bot.Pawn->K2_GetActorLocation(), FleeDirection);
         }
 
         void ExecuteRotateBehavior(FBotPlayer& Bot)
@@ -639,7 +642,7 @@ namespace BotSystem
                 FloatDist(RNG) * 3000.0f - 1500.0f,
                 0.0f
             );
-            Bot.TargetLocation = Bot.Pawn->K2_GetActorLocation() + RandomOffset;
+            Bot.TargetLocation = FVectorHelpers::operator+(Bot.Pawn->K2_GetActorLocation(), RandomOffset);
         }
 
         void ExecuteHealBehavior(FBotPlayer& Bot)
@@ -659,7 +662,7 @@ namespace BotSystem
                     FloatDist(RNG) * 500.0f - 250.0f,
                     0.0f
                 );
-                Bot.TargetLocation = Bot.Pawn->K2_GetActorLocation() + RandomOffset;
+                Bot.TargetLocation = FVectorHelpers::operator+(Bot.Pawn->K2_GetActorLocation(), RandomOffset);
             }
         }
 
