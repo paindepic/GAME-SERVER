@@ -3,6 +3,9 @@
 #include "Teams.h"
 #include "Looting.h"
 
+// Forward declaration for storm reset function (defined in framework.h)
+void ResetStormConfiguration();
+
 bool (*ReadyToStartMatchOG)(void*);
 bool ReadyToStartMatchHook(AFortGameModeAthena* a1)
 {
@@ -118,6 +121,29 @@ bool ReadyToStartMatchHook(AFortGameModeAthena* a1)
         GetGameMode()->WarmupCountdownDuration = 120.f;
         GetGameState()->WarmupCountdownStartTime = TimeSeconds;
         GetGameMode()->WarmupEarlyCountdownDuration = 120.f;
+
+        // Initialize SafeZone/Storm settings to prevent 3-hour storm timer
+        auto GameState = GetGameState();
+        if (GameState)
+        {
+            // Reset storm configuration for new game
+            ResetStormConfiguration();
+            
+            // Set proper storm timing values
+            if (GameState->SafeZoneIndicator)
+            {
+                // First zone starts after 5 minutes of gameplay
+                GameState->SafeZoneIndicator->SafeZoneStartShrinkTime = TimeSeconds + 120.f + 300.f; // After warmup + 5 min
+                GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameState->SafeZoneIndicator->SafeZoneStartShrinkTime + 180.f; // 3 min shrink
+                
+                // Set initial safe zone radius
+                GameState->SafeZoneIndicator->Radius = 20000.0f;
+                GameState->SafeZoneIndicator->NextRadius = 10000.0f;
+                
+                LOG_("Storm initialized - First zone starts in {:.1f} seconds", 
+                     GameState->SafeZoneIndicator->SafeZoneStartShrinkTime - TimeSeconds);
+            }
+        }
 
         static __int64 (*DedicatedServerStuff)(__int64) = decltype(DedicatedServerStuff)(GetOffsetBRUH(0x1525A10));
         // DedicatedServerStuff(__int64(a1->FortGameSession)); 

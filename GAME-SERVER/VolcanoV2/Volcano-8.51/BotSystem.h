@@ -7,6 +7,9 @@
 #include <chrono>
 #include <cmath>
 
+// Include SDK for bot spawning
+#include "sdk/SDK.hpp"
+
 // Forward declarations for SDK types - using SDK namespace explicitly
 namespace SDK
 {
@@ -14,6 +17,9 @@ namespace SDK
     class AFortPawn;
     class AActor;
     class AFortGameStateAthena;
+    class AFortPlayerStateAthena;
+    class AAthena_PlayerController_C;
+    class APlayerPawn_Athena_C;
     class AFortPlayerStateAthena;
 }
 
@@ -77,6 +83,62 @@ namespace BotSystem
         Random           // Random behavior
     };
 
+    // Bot lobby behavior states
+    enum class EBotLobbyBehavior
+    {
+        Idle,
+        Dancing,
+        Walking,
+        PracticeShooting,
+        Emoting
+    };
+
+    // Bot game phase
+    enum class EBotGamePhase
+    {
+        Lobby,
+        BattleBus,
+        Skydiving,
+        Landing,
+        Gameplay
+    };
+
+    // POI locations for bot landing (Battle Royale map locations)
+    struct FPOILocation
+    {
+        std::string Name;
+        SDK::FVector Location;
+        float Popularity;  // 0.0-1.0 chance bots will land here
+    };
+
+    // Default POI locations for Season 8 map
+    static const std::vector<FPOILocation> POILocations = {
+        {"Tilted Towers", {3000.0f, -2000.0f, 1000.0f}, 0.9f},
+        {"Pleasant Park", {-4000.0f, 2000.0f, 1000.0f}, 0.8f},
+        {"Retail Row", {5000.0f, 3000.0f, 1000.0f}, 0.85f},
+        {"Salty Springs", {1000.0f, 1500.0f, 1000.0f}, 0.7f},
+        {"Lazy Lagoon", {-2000.0f, -3000.0f, 1000.0f}, 0.75f},
+        {"Sunny Steps", {4000.0f, -2500.0f, 1000.0f}, 0.6f},
+        {"Lonely Lodge", {6000.0f, -1000.0f, 1000.0f}, 0.5f},
+        {"Paradise Palms", {-3500.0f, -4000.0f, 1000.0f}, 0.65f},
+        {"Loot Lake", {0.0f, -500.0f, 1000.0f}, 0.55f},
+        {"Fatal Fields", {2000.0f, 3500.0f, 1000.0f}, 0.6f},
+        {"Dusty Divot", {1000.0f, -1500.0f, 1000.0f}, 0.7f},
+        {"Mega Mall", {5000.0f, 3000.0f, 1000.0f}, 0.75f},
+        {"Pressure Plant", {4000.0f, -2000.0f, 1000.0f}, 0.55f},
+        {"Haunted Hills", {-3500.0f, 3500.0f, 1000.0f}, 0.45f},
+        {"Junk Junction", {-4000.0f, 4500.0f, 1000.0f}, 0.4f},
+        {"Snobby Shores", {-4500.0f, -1500.0f, 1000.0f}, 0.5f},
+        {"Shifty Shafts", {-1500.0f, 500.0f, 1000.0f}, 0.6f},
+        {"Frosty Flights", {-4000.0f, -3500.0f, 1000.0f}, 0.5f},
+        {"Happy Hamlet", {-2000.0f, 5000.0f, 1000.0f}, 0.55f},
+        {"Polar Peak", {-2500.0f, -4000.0f, 1000.0f}, 0.6f},
+        {"Wailing Woods", {5500.0f, -2500.0f, 1000.0f}, 0.5f},
+        {"Tomato Temple", {2500.0f, -2500.0f, 1000.0f}, 0.55f},
+        {"Risky Reels", {3500.0f, -3500.0f, 1000.0f}, 0.45f},
+        {"Lucky Landing", {1500.0f, 4500.0f, 1000.0f}, 0.6f}
+    };
+
     // Bot difficulty level affecting aim accuracy, reaction time, etc.
     enum class EBotDifficulty
     {
@@ -122,17 +184,24 @@ namespace BotSystem
     {
         SDK::AFortPlayerControllerAthena* Controller;
         SDK::AFortPawn* Pawn;
+        SDK::AFortPlayerStateAthena* PlayerState;
         std::string Name;
         FBotConfig Config;
         EBotCombatState CurrentState;
+        EBotLobbyBehavior LobbyBehavior;
+        EBotGamePhase GamePhase;
         SDK::FVector TargetLocation;
+        SDK::FVector LandingLocation;
         SDK::AActor* TargetEnemy;
         float LastActionTime;
         float StateChangeCooldown;
+        float LobbyBehaviorCooldown;
         int Kills;
         int Deaths;
         float TotalDamageDealt;
         bool bIsAlive;
+        bool bHasLanded;
+        bool bHasJumpedFromBus;
 
         // Accessor for config personality (needed in advanced behaviors)
         EBotPersonality GetPersonality() const { return Config.Personality; }
@@ -418,32 +487,181 @@ namespace BotSystem
             if (!CanSpawnBot())
                 return;
 
+            auto World = GetWorld();
+            auto Statics = GetStatics();
+            auto GameState = GetGameState();
+            if (!World || !Statics || !GameState)
+                return;
+
             FBotPlayer NewBot{};
             NewBot.Name = GetRandomName();
             NewBot.Config = GenerateRandomConfig();
             NewBot.CurrentState = EBotCombatState::Looting;
-            NewBot.LastActionTime = GetStatics()->GetTimeSeconds(GetWorld());
+            NewBot.LobbyBehavior = EBotLobbyBehavior::Idle;
+            NewBot.GamePhase = EBotGamePhase::Lobby;
+            NewBot.LastActionTime = Statics->GetTimeSeconds(World);
             NewBot.StateChangeCooldown = 2.0f + FloatDist(RNG) * 3.0f;
+            NewBot.LobbyBehaviorCooldown = 1.0f + FloatDist(RNG) * 2.0f;
             NewBot.Kills = 0;
             NewBot.Deaths = 0;
             NewBot.TotalDamageDealt = 0.0f;
             NewBot.bIsAlive = false;
+            NewBot.bHasLanded = false;
+            NewBot.bHasJumpedFromBus = false;
             NewBot.Controller = nullptr;
             NewBot.Pawn = nullptr;
+            NewBot.PlayerState = nullptr;
             NewBot.TargetEnemy = nullptr;
+            NewBot.TargetLocation = SDK::FVector{0.0f, 0.0f, 0.0f};
+            NewBot.LandingLocation = SDK::FVector{0.0f, 0.0f, 0.0f};
+
+            // Create actual PlayerController for the bot
+            SDK::AAthena_PlayerController_C* BotController = nullptr;
+            auto ControllerClass = SDK::AAthena_PlayerController_C::StaticClass();
+            if (ControllerClass)
+            {
+                // Spawn location for lobby (will be moved to game spawn later)
+                SDK::FVector SpawnLoc{0.0f, 0.0f, 2000.0f};
+                SDK::FRotator SpawnRot{0.0f, 0.0f, 0.0f};
+                BotController = SpawnActor<SDK::AAthena_PlayerController_C>(ControllerClass, SpawnLoc, SpawnRot, nullptr);
+            }
+
+            if (!BotController)
+            {
+                LOG_("Failed to spawn bot controller for {}", NewBot.Name);
+                return;
+            }
+
+            // Create PlayerState for the bot
+            SDK::AFortPlayerStateAthena* BotPlayerState = nullptr;
+            auto PlayerStateClass = SDK::AFortPlayerStateAthena::StaticClass();
+            if (PlayerStateClass)
+            {
+                BotPlayerState = static_cast<SDK::AFortPlayerStateAthena*>(World->SpawnActor(PlayerStateClass));
+            }
+
+            if (BotPlayerState)
+            {
+                // Set bot name in PlayerState
+                std::wstring BotNameW(NewBot.Name.begin(), NewBot.Name.end());
+                FString BotNameFString(BotNameW.c_str());
+                BotPlayerState->SetPlayerName(BotNameFString);
+                
+                // Assign a unique team to each bot for solo mode
+                static int BotTeamIndex = 50;  // Start bot teams at 50 to avoid conflicts
+                BotPlayerState->TeamIndex = BotTeamIndex++;
+                BotPlayerState->OnRep_TeamIndex();
+            }
+
+            // Create Pawn for the bot
+            SDK::APlayerPawn_Athena_C* BotPawn = nullptr;
+            auto PawnClass = SDK::APlayerPawn_Athena_C::StaticClass();
+            if (PawnClass)
+            {
+                SDK::FVector SpawnLoc{0.0f, 0.0f, 2000.0f};
+                SDK::FRotator SpawnRot{0.0f, 0.0f, 0.0f};
+                BotPawn = SpawnActor<SDK::APlayerPawn_Athena_C>(PawnClass, SpawnLoc, SpawnRot, BotController);
+            }
+
+            if (!BotPawn)
+            {
+                LOG_("Failed to spawn bot pawn for {}", NewBot.Name);
+                if (BotController)
+                {
+                    BotController->K2_DestroyActor();
+                }
+                return;
+            }
+
+            // Link Controller, Pawn, and PlayerState
+            BotController->Pawn = BotPawn;
+            BotController->PlayerState = BotPlayerState;
+            BotController->OnRep_Pawn();
+            BotController->OnRep_PlayerState();
+
+            BotPawn->Owner = BotController;
+            BotPawn->Controller = BotController;
+            if (BotPlayerState)
+            {
+                BotPawn->PlayerState = BotPlayerState;
+            }
+            BotPawn->OnRep_Controller();
+            BotPawn->OnRep_PlayerState();
+
+            // Possess the pawn
+            BotController->Possess(BotPawn);
+
+            // Mark bot as alive
+            NewBot.Controller = BotController;
+            NewBot.Pawn = BotPawn;
+            NewBot.PlayerState = BotPlayerState;
+            NewBot.bIsAlive = true;
+
+            // Add bot to GameState PlayerArray for minimap visibility
+            if (BotPlayerState && GameState)
+            {
+                GameState->PlayerArray.Add(BotPlayerState);
+                GameState->OnRep_PlayerArray();
+            }
+
+            // Increment player count
+            if (GameState)
+            {
+                GameState->PlayerCount++;
+                GameState->TotalPlayers++;
+                GameState->OnRep_PlayerCount();
+            }
+
+            // Select landing location for battle bus phase
+            if (!POILocations.empty())
+            {
+                // Weighted random selection based on popularity
+                float TotalWeight = 0.0f;
+                for (const auto& POI : POILocations)
+                {
+                    TotalWeight += POI.Popularity;
+                }
+                
+                float RandomValue = FloatDist(RNG) * TotalWeight;
+                float CurrentWeight = 0.0f;
+                
+                for (const auto& POI : POILocations)
+                {
+                    CurrentWeight += POI.Popularity;
+                    if (RandomValue <= CurrentWeight)
+                    {
+                        // Add some randomness to landing spot (bots don't land at exact same spot)
+                        float OffsetX = (FloatDist(RNG) - 0.5f) * 500.0f;
+                        float OffsetY = (FloatDist(RNG) - 0.5f) * 500.0f;
+                        NewBot.LandingLocation = SDK::FVector{
+                            POI.Location.X + OffsetX,
+                            POI.Location.Y + OffsetY,
+                            POI.Location.Z
+                        };
+                        break;
+                    }
+                }
+            }
 
             Bots.push_back(NewBot);
-            LastSpawnTime = GetStatics()->GetTimeSeconds(GetWorld());
+            LastSpawnTime = Statics->GetTimeSeconds(World);
 
-            LOG_("Spawned bot: {} (Personality: {}, Difficulty: {})",
+            LOG_("Spawned bot: {} (Personality: {}, Difficulty: {}) - Controller: 0x{:x}, Pawn: 0x{:x}",
                  NewBot.Name,
                  static_cast<int>(NewBot.Config.Personality),
-                 static_cast<int>(NewBot.Config.Difficulty));
+                 static_cast<int>(NewBot.Config.Difficulty),
+                 reinterpret_cast<uintptr_t>(BotController),
+                 reinterpret_cast<uintptr_t>(BotPawn));
         }
 
         void Update(float DeltaTime)
         {
             if (!bInitialized)
+                return;
+
+            auto World = GetWorld();
+            auto GameState = GetGameState();
+            if (!World || !GameState)
                 return;
 
             // Spawn bots periodically
@@ -452,12 +670,37 @@ namespace BotSystem
                 SpawnBot();
             }
 
+            // Check game phase and update bot behaviors accordingly
+            bool bInWarmup = GameState->WarmupCountdownEndTime > GetStatics()->GetTimeSeconds(World);
+            bool bGameStarted = !bInWarmup && GameState->GamePhase >= EAthenaGamePhase::Aircraft;
+
             // Update all bots
             for (auto& Bot : Bots)
             {
-                if (Bot.bIsAlive && Bot.Pawn && Bot.Controller)
+                if (!Bot.bIsAlive || !Bot.Pawn || !Bot.Controller)
+                    continue;
+
+                if (bInWarmup)
                 {
-                    UpdateBotBehavior(Bot, DeltaTime);
+                    // In lobby/warmup phase
+                    UpdateLobbyBehavior(Bot, DeltaTime);
+                }
+                else if (bGameStarted)
+                {
+                    // Game has started - handle battle bus and gameplay
+                    if (Bot.GamePhase == EBotGamePhase::Lobby)
+                    {
+                        Bot.GamePhase = EBotGamePhase::BattleBus;
+                    }
+                    
+                    if (Bot.GamePhase == EBotGamePhase::BattleBus)
+                    {
+                        UpdateBattleBusBehavior(Bot, DeltaTime);
+                    }
+                    else if (Bot.GamePhase == EBotGamePhase::Gameplay)
+                    {
+                        UpdateBotBehavior(Bot, DeltaTime);
+                    }
                 }
             }
 
@@ -466,6 +709,232 @@ namespace BotSystem
                 std::remove_if(Bots.begin(), Bots.end(),
                     [](const FBotPlayer& Bot) { return !Bot.bIsAlive && Bot.Deaths > 0; }),
                 Bots.end());
+        }
+
+        void UpdateLobbyBehavior(FBotPlayer& Bot, float DeltaTime)
+        {
+            if (!Bot.Pawn || !Bot.Controller)
+                return;
+
+            auto World = GetWorld();
+            auto Statics = GetStatics();
+            if (!World || !Statics)
+                return;
+
+            float CurrentTime = Statics->GetTimeSeconds(World);
+
+            // Check if we should change lobby behavior
+            if (CurrentTime - Bot.LastActionTime >= Bot.LobbyBehaviorCooldown)
+            {
+                // Randomly select a lobby behavior
+                float RandomValue = FloatDist(RNG);
+                if (RandomValue < 0.25f)
+                {
+                    Bot.LobbyBehavior = EBotLobbyBehavior::Dancing;
+                }
+                else if (RandomValue < 0.50f)
+                {
+                    Bot.LobbyBehavior = EBotLobbyBehavior::Walking;
+                }
+                else if (RandomValue < 0.70f)
+                {
+                    Bot.LobbyBehavior = EBotLobbyBehavior::PracticeShooting;
+                }
+                else if (RandomValue < 0.85f)
+                {
+                    Bot.LobbyBehavior = EBotLobbyBehavior::Emoting;
+                }
+                else
+                {
+                    Bot.LobbyBehavior = EBotLobbyBehavior::Idle;
+                }
+
+                Bot.LastActionTime = CurrentTime;
+                Bot.LobbyBehaviorCooldown = 2.0f + FloatDist(RNG) * 5.0f;
+
+                // Set new target location for walking behavior
+                if (Bot.LobbyBehavior == EBotLobbyBehavior::Walking)
+                {
+                    float RandomX = (FloatDist(RNG) - 0.5f) * 2000.0f;
+                    float RandomY = (FloatDist(RNG) - 0.5f) * 2000.0f;
+                    Bot.TargetLocation = SDK::FVector{RandomX, RandomY, 2000.0f};
+                }
+            }
+
+            // Execute lobby behavior
+            switch (Bot.LobbyBehavior)
+            {
+                case EBotLobbyBehavior::Dancing:
+                    ExecuteLobbyDance(Bot);
+                    break;
+                case EBotLobbyBehavior::Walking:
+                    ExecuteLobbyWalk(Bot, DeltaTime);
+                    break;
+                case EBotLobbyBehavior::PracticeShooting:
+                    ExecuteLobbyPracticeShoot(Bot);
+                    break;
+                case EBotLobbyBehavior::Emoting:
+                    ExecuteLobbyEmote(Bot);
+                    break;
+                case EBotLobbyBehavior::Idle:
+                default:
+                    // Just stand still
+                    break;
+            }
+        }
+
+        void ExecuteLobbyDance(FBotPlayer& Bot)
+        {
+            // Dance in place - rotation oscillation to simulate dancing
+            if (!Bot.Pawn)
+                return;
+
+            auto CurrentRot = Bot.Pawn->K2_GetActorRotation();
+            float DanceOffset = std::sin(GetStatics()->GetTimeSeconds(GetWorld()) * 5.0f) * 15.0f;
+            CurrentRot.Yaw += DanceOffset;
+            Bot.Pawn->K2_SetActorRotation(CurrentRot, false);
+        }
+
+        void ExecuteLobbyWalk(FBotPlayer& Bot, float DeltaTime)
+        {
+            if (!Bot.Pawn)
+                return;
+
+            auto CurrentLocation = Bot.Pawn->K2_GetActorLocation();
+            SDK::FVector Direction = FVectorHelpers::operator-(Bot.TargetLocation, CurrentLocation);
+            float Distance = std::sqrt(Direction.X * Direction.X + Direction.Y * Direction.Y + Direction.Z * Direction.Z);
+
+            if (Distance < 100.0f)
+            {
+                // Reached target, pick new target
+                float RandomX = (FloatDist(RNG) - 0.5f) * 2000.0f;
+                float RandomY = (FloatDist(RNG) - 0.5f) * 2000.0f;
+                Bot.TargetLocation = SDK::FVector{RandomX, RandomY, 2000.0f};
+                return;
+            }
+
+            FVectorHelpers::Normalize(Direction);
+
+            // Move towards target
+            float MoveSpeed = 300.0f * DeltaTime;  // Walking speed
+            SDK::FVector NewLocation = FVectorHelpers::operator+(CurrentLocation, FVectorHelpers::operator*(Direction, MoveSpeed));
+            
+            // Face movement direction
+            SDK::FRotator NewRotation = GetMath()->FindLookAtRotation(CurrentLocation, Bot.TargetLocation);
+            Bot.Pawn->K2_SetActorRotation(NewRotation, false);
+            Bot.Pawn->K2_TeleportTo(NewLocation, NewRotation);
+        }
+
+        void ExecuteLobbyPracticeShoot(FBotPlayer& Bot)
+        {
+            // Practice aiming by rotating randomly
+            if (!Bot.Pawn)
+                return;
+
+            auto CurrentRot = Bot.Pawn->K2_GetActorRotation();
+            float AimOffset = (FloatDist(RNG) - 0.5f) * 60.0f;
+            CurrentRot.Yaw += AimOffset;
+            Bot.Pawn->K2_SetActorRotation(CurrentRot, false);
+        }
+
+        void ExecuteLobbyEmote(FBotPlayer& Bot)
+        {
+            // Simple emote simulation - quick spin
+            if (!Bot.Pawn)
+                return;
+
+            auto CurrentRot = Bot.Pawn->K2_GetActorRotation();
+            CurrentRot.Yaw += 180.0f * 0.016f;  // Spin slowly
+            Bot.Pawn->K2_SetActorRotation(CurrentRot, false);
+        }
+
+        void UpdateBattleBusBehavior(FBotPlayer& Bot, float DeltaTime)
+        {
+            if (!Bot.Pawn || !Bot.Controller)
+                return;
+
+            auto GameState = GetGameState();
+            if (!GameState)
+                return;
+
+            float CurrentTime = GetStatics()->GetTimeSeconds(GetWorld());
+
+            // Check if we should jump from the bus
+            // Bots jump at different times based on their landing location
+            float BusStartTime = GameState->WarmupCountdownEndTime;
+            float BusFlightTime = CurrentTime - BusStartTime;
+            
+            // Calculate ideal jump time based on landing location
+            // (Bots should jump when bus is closest to their landing location)
+            float TimeToJump = 5.0f + (FloatDist(RNG) * 25.0f);  // Jump between 5-30 seconds after bus starts
+
+            if (!Bot.bHasJumpedFromBus && BusFlightTime >= TimeToJump)
+            {
+                JumpFromBattleBus(Bot);
+            }
+
+            if (Bot.bHasJumpedFromBus && !Bot.bHasLanded)
+            {
+                UpdateSkydiving(Bot, DeltaTime);
+            }
+        }
+
+        void JumpFromBattleBus(FBotPlayer& Bot)
+        {
+            if (!Bot.Pawn)
+                return;
+
+            // Get bus location (approximate - in real implementation would get actual bus location)
+            auto GameState = GetGameState();
+            if (!GameState)
+                return;
+
+            // Start skydiving from bus location
+            SDK::FVector BusLocation = Bot.Pawn->K2_GetActorLocation();
+            BusLocation.Z = 15000.0f;  // Battle bus altitude
+
+            Bot.Pawn->K2_TeleportTo(BusLocation, Bot.Pawn->K2_GetActorRotation());
+            Bot.bHasJumpedFromBus = true;
+            Bot.GamePhase = EBotGamePhase::Skydiving;
+
+            LOG_("Bot {} jumped from battle bus, heading to landing zone", Bot.Name);
+        }
+
+        void UpdateSkydiving(FBotPlayer& Bot, float DeltaTime)
+        {
+            if (!Bot.Pawn)
+                return;
+
+            auto CurrentLocation = Bot.Pawn->K2_GetActorLocation();
+            SDK::FVector Direction = FVectorHelpers::operator-(Bot.LandingLocation, CurrentLocation);
+            float DistanceXY = std::sqrt(Direction.X * Direction.X + Direction.Y * Direction.Y);
+            float DistanceZ = Direction.Z;
+
+            // Check if we've landed
+            if (CurrentLocation.Z <= Bot.LandingLocation.Z + 100.0f)
+            {
+                Bot.bHasLanded = true;
+                Bot.GamePhase = EBotGamePhase::Gameplay;
+                Bot.CurrentState = EBotCombatState::Looting;
+                LOG_("Bot {} landed at their POI", Bot.Name);
+                return;
+            }
+
+            // Skydiving movement - move towards landing location while falling
+            FVectorHelpers::Normalize(Direction);
+
+            float FallSpeed = 800.0f * DeltaTime;  // Falling speed
+            float GlideSpeed = 600.0f * DeltaTime; // Horizontal glide speed
+
+            SDK::FVector NewLocation;
+            NewLocation.X = CurrentLocation.X + Direction.X * GlideSpeed;
+            NewLocation.Y = CurrentLocation.Y + Direction.Y * GlideSpeed;
+            NewLocation.Z = CurrentLocation.Z - FallSpeed;
+
+            // Face landing direction
+            SDK::FRotator NewRotation = GetMath()->FindLookAtRotation(CurrentLocation, Bot.LandingLocation);
+            
+            Bot.Pawn->K2_TeleportTo(NewLocation, NewRotation);
         }
 
         void UpdateBotBehavior(FBotPlayer& Bot, float DeltaTime)
