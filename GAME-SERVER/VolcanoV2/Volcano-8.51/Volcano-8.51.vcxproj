@@ -139,7 +139,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalDependencies>curl/libcurl.lib;curl/zlib.lib;OneCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>inclueds/curl/libcurl.lib;inclueds/curl/zlib.lib;OneCore.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>./inclueds/;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
