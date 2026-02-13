@@ -4,20 +4,20 @@
 #include "Looting.h"
 
 bool (*ReadyToStartMatchOG)(void*);
-bool ReadyToStartMatchHook(AFortGameModeAthena* a1)
+bool ReadyToStartMatchHook(SDK::AFortGameModeAthena* a1)
 {
 	static bool bPLAYLIST = false;
 	if (!bPLAYLIST)
 	{
 		bPLAYLIST = true;
 
-		auto playlist = UObject::FindObject<UFortPlaylistAthena>(Globals::PlaylistName);
+		auto playlist = SDK::UObject::FindObject<SDK::UFortPlaylistAthena>(Globals::PlaylistName);
 		if (playlist)
 		{
 			if (Globals::bPlayground)
 			{
 				playlist->bRespawnInAir = true;
-				playlist->RespawnType = EAthenaRespawnType::InfiniteRespawn;
+				playlist->RespawnType = SDK::EAthenaRespawnType::InfiniteRespawn;
 				a1->MinRespawnDelay = 5.f;
 			}
 
@@ -63,8 +63,8 @@ bool ReadyToStartMatchHook(AFortGameModeAthena* a1)
 		GetGameState()->OnRep_CurrentPlaylistInfo();
 		InitLooting();
 
-		auto BR_FloorLoot_Class = StaticLoadObject<UBlueprintGeneratedClass>("/Game/Athena/Environments/Blueprints/Tiered_Athena_FloorLoot_01.Tiered_Athena_FloorLoot_01_C");
-		TArray<AActor*> BR_FloorLootActors;
+		auto BR_FloorLoot_Class = StaticLoadObject<SDK::UBlueprintGeneratedClass>("/Game/Athena/Environments/Blueprints/Tiered_Athena_FloorLoot_01.Tiered_Athena_FloorLoot_01_C");
+		SDK::TArray<SDK::AActor*> BR_FloorLootActors;
 		GetStatics()->GetAllActorsOfClass(GetWorld(), BR_FloorLoot_Class, &BR_FloorLootActors);
 		int SpawnedLoot = 0;
 		for (int i = 0; i < BR_FloorLootActors.Num(); i++)
@@ -72,13 +72,13 @@ bool ReadyToStartMatchHook(AFortGameModeAthena* a1)
 			auto CurrentActor = BR_FloorLootActors[i];
 			if (CurrentActor)
 			{
-				FVector Loc = CurrentActor->K2_GetActorLocation();
+				SDK::FVector Loc = CurrentActor->K2_GetActorLocation();
 				Loc.Z += 30;
 				SpawnedLoot++;
 				auto loot = GetFloorLoot();
 				for (auto& LootItem : loot)
 				{
-					SpawnPickup(LootItem->ItemDefinition, LootItem->DropCount, LootItem->LoadedAmmo, Loc, EFortPickupSourceTypeFlag::Container, EFortPickupSpawnSource::Unset);
+					SpawnPickup(LootItem->ItemDefinition, LootItem->DropCount, LootItem->LoadedAmmo, Loc, SDK::EFortPickupSourceTypeFlag::Container, SDK::EFortPickupSpawnSource::Unset);
 				}
 
 				CurrentActor->K2_DestroyActor(); // bruh
@@ -86,21 +86,21 @@ bool ReadyToStartMatchHook(AFortGameModeAthena* a1)
 		}
 		BR_FloorLootActors.Free();
 
-		auto Warmup_FloorLoot_Class = StaticLoadObject<UBlueprintGeneratedClass>("/Game/Athena/Environments/Blueprints/Tiered_Athena_FloorLoot_Warmup.Tiered_Athena_FloorLoot_Warmup_C");
-		TArray<AActor*> Warmup_FloorlootActors;
+		auto Warmup_FloorLoot_Class = StaticLoadObject<SDK::UBlueprintGeneratedClass>("/Game/Athena/Environments/Blueprints/Tiered_Athena_FloorLoot_Warmup.Tiered_Athena_FloorLoot_Warmup_C");
+		SDK::TArray<SDK::AActor*> Warmup_FloorlootActors;
 		GetStatics()->GetAllActorsOfClass(GetWorld(), Warmup_FloorLoot_Class, &Warmup_FloorlootActors);
 		for (int i = 0; i < Warmup_FloorlootActors.Num(); i++)
 		{
 			auto CurrentActor = Warmup_FloorlootActors[i];
 			if (CurrentActor)
 			{
-				FVector Loc = CurrentActor->K2_GetActorLocation();
+				SDK::FVector Loc = CurrentActor->K2_GetActorLocation();
 				Loc.Z += 30;
 				SpawnedLoot++;
 				auto loot = GetFloorLoot();
 				for (auto& LootItem : loot)
 				{
-					SpawnPickup(LootItem->ItemDefinition, LootItem->DropCount, LootItem->LoadedAmmo, Loc, EFortPickupSourceTypeFlag::Container, EFortPickupSpawnSource::Unset);
+					SpawnPickup(LootItem->ItemDefinition, LootItem->DropCount, LootItem->LoadedAmmo, Loc, SDK::EFortPickupSourceTypeFlag::Container, SDK::EFortPickupSpawnSource::Unset);
 				}
 				CurrentActor->K2_DestroyActor(); // this should call uhh SpawnLoot
 			}
@@ -138,7 +138,7 @@ bool ReadyToStartMatchHook(AFortGameModeAthena* a1)
 	return Ret;
 }
 
-APawn* SpawnDefaultPawnForHook(AGameModeBase* a1, AController* NewPlayer, AActor* StartSpot)
+SDK::APawn* SpawnDefaultPawnForHook(SDK::AGameModeBase* a1, SDK::AController* NewPlayer, SDK::AActor* StartSpot)
 {
 	if (NewPlayer && StartSpot)
 	{

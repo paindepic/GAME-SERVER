@@ -73,9 +73,9 @@ uintptr_t GetOffsetBRUH(uintptr_t Offset)
 	return __int64(GetModuleHandleW(0)) + Offset;
 }
 
-static UNetDriver* (*CreateNetDriver)(UEngine*, UWorld*, FName) = decltype(CreateNetDriver)(GetOffsetBRUH(0x2FBED30));
-static void (*SetWorld)(UNetDriver*, UWorld*) = decltype(SetWorld)(GetOffsetBRUH(0x2D38590));
-static bool (*InitListenOG)(void*, void*, FURL&, bool, FString&) = decltype(InitListenOG)(GetOffsetBRUH(0x634C10));
+static SDK::UNetDriver* (*CreateNetDriver)(SDK::UEngine*, SDK::UWorld*, SDK::FName) = decltype(CreateNetDriver)(GetOffsetBRUH(0x2FBED30));
+static void (*SetWorld)(SDK::UNetDriver*, SDK::UWorld*) = decltype(SetWorld)(GetOffsetBRUH(0x2D38590));
+static bool (*InitListenOG)(void*, void*, SDK::FURL&, bool, SDK::FString&) = decltype(InitListenOG)(GetOffsetBRUH(0x634C10));
 static void (*ServerReplicateActors)(void*);
 
 BYTE* __fastcall ChangeGameSessionId()
@@ -84,7 +84,7 @@ BYTE* __fastcall ChangeGameSessionId()
 }
 
 template<typename T>
-T* Cast(UObject* Object, bool bForceCheck = true)
+T* Cast(SDK::UObject* Object, bool bForceCheck = true)
 {
 	if (Object)
 	{
@@ -116,8 +116,8 @@ char __fastcall CanActivateAbility(__int64 a1, unsigned int a2, DWORD* a3, __int
 
 // 0x2D39300
 // frf rfr frf rf
-void (*TickFlushOG)(UNetDriver*);
-void TickFlushHook(UNetDriver* a1)
+void (*TickFlushOG)(SDK::UNetDriver*);
+void TickFlushHook(SDK::UNetDriver* a1)
 {
 	if (!a1)
 		return;
@@ -162,12 +162,12 @@ __int64 __fastcall NoReserve(__int64 a1, __int64 a2, __int64 a3, char a4)
 	return 0;
 }
 
-__int64 UWorldGetNetMode(UWorld* a1)
+__int64 UWorldGetNetMode(SDK::UWorld* a1)
 {
 	return 1;
 }
 
-__int64 AActorGetNetMode(AActor* a1)
+__int64 AActorGetNetMode(SDK::AActor* a1)
 {
 	return 1;
 }
@@ -178,45 +178,45 @@ T* GetDefObj()
 	return (T*)T::StaticClass()->DefaultObject;
 }
 
-UFortEngine* GetEngine()
+SDK::UFortEngine* GetEngine()
 {
-	static auto clapped = UObject::FindObject<UFortEngine>("FortEngine_");
+	static auto clapped = SDK::UObject::FindObject<SDK::UFortEngine>("FortEngine_");
 	return clapped;
 }
 
-UWorld* GetWorld()
+SDK::UWorld* GetWorld()
 {
 	return GetEngine()->GameViewport->World;
 }
 
-AFortGameStateAthena* GetGameState()
+SDK::AFortGameStateAthena* GetGameState()
 {
-	return (AFortGameStateAthena*)GetWorld()->GameState;
+	return (SDK::AFortGameStateAthena*)GetWorld()->GameState;
 }
 
-AFortGameModeAthena* GetGameMode()
+SDK::AFortGameModeAthena* GetGameMode()
 {
-	return (AFortGameModeAthena*)GetWorld()->AuthorityGameMode;
+	return (SDK::AFortGameModeAthena*)GetWorld()->AuthorityGameMode;
 }
 
-UFortKismetLibrary* GetFortKismet()
+SDK::UFortKismetLibrary* GetFortKismet()
 {
-	return GetDefObj<UFortKismetLibrary>();
+	return GetDefObj<SDK::UFortKismetLibrary>();
 }
 
-UGameplayStatics* GetStatics()
+SDK::UGameplayStatics* GetStatics()
 {
-	return GetDefObj<UGameplayStatics>();
+	return GetDefObj<SDK::UGameplayStatics>();
 }
 
-UKismetStringLibrary* GetString()
+SDK::UKismetStringLibrary* GetString()
 {
-	return GetDefObj<UKismetStringLibrary>();
+	return GetDefObj<SDK::UKismetStringLibrary>();
 }
 
-UKismetMathLibrary* GetMath()
+SDK::UKismetMathLibrary* GetMath()
 {
-	return GetDefObj<UKismetMathLibrary>();
+	return GetDefObj<SDK::UKismetMathLibrary>();
 }
 
 void VirtualHook(void* Objce, int Index, void* Detour, void** OG = nullptr)
@@ -240,21 +240,21 @@ void VirtualHook(void* Objce, int Index, void* Detour, void** OG = nullptr)
 }
 
 template<typename UEType>
-UEType* StaticFindObject(const std::string& ObjectName, UClass* Class = UObject::StaticClass())
+UEType* StaticFindObject(const std::string& ObjectName, SDK::UClass* Class = SDK::UObject::StaticClass())
 {
 	auto OrigInName = std::wstring(ObjectName.begin(), ObjectName.end()).c_str();
-	static void* (*StaticFindObjectOG)(UClass*, UObject * Package, const wchar_t* OrigInName, bool ExactClass) = decltype(StaticFindObjectOG)(__int64(GetModuleHandleW(0)) + 0x1E825F0);
+	static void* (*StaticFindObjectOG)(SDK::UClass*, SDK::UObject * Package, const wchar_t* OrigInName, bool ExactClass) = decltype(StaticFindObjectOG)(__int64(GetModuleHandleW(0)) + 0x1E825F0);
 	return (UEType*)StaticFindObjectOG(Class, nullptr, OrigInName, false);
 }
 
-template<typename T = UObject>
+template<typename T = SDK::UObject>
 T* StaticLoadObject(const std::string& Name)
 {
 	T* Object = StaticFindObject<T>(Name);
 
 	if (!Object)
 	{
-		static void* (*StaticLoadObjectOG)(UClass * Class, UObject * InOuter, const TCHAR * Name, const TCHAR * Filename, uint32_t LoadFlags, UObject * Sandbox, bool bAllowObjectReconciliation, void*) = decltype(StaticLoadObjectOG)(__int64(GetModuleHandleW(0)) + 0x1E82EE0);
+		static void* (*StaticLoadObjectOG)(SDK::UClass * Class, SDK::UObject * InOuter, const TCHAR * Name, const TCHAR * Filename, uint32_t LoadFlags, SDK::UObject * Sandbox, bool bAllowObjectReconciliation, void*) = decltype(StaticLoadObjectOG)(__int64(GetModuleHandleW(0)) + 0x1E82EE0);
 		auto NameO = std::wstring(Name.begin(), Name.end()).c_str();
 		Object = (T*)StaticLoadObjectOG(T::StaticClass(), nullptr, NameO, nullptr, 0, nullptr, false, nullptr);
 	}
@@ -295,7 +295,7 @@ void sinCos(float* ScalarSin, float* ScalarCos, float Value)
 	*ScalarCos = sign * p;
 }
 
-FQuat FRotToQuat(FRotator Rot)
+SDK::FQuat FRotToQuat(SDK::FRotator Rot)
 {
 	const float DEG_TO_RAD = 3.1415926535897932f / (180.f);
 	const float DIVIDE_BY_2 = DEG_TO_RAD / 2.f;
@@ -306,7 +306,7 @@ FQuat FRotToQuat(FRotator Rot)
 	sinCos(&SY, &CY, Rot.Yaw * DIVIDE_BY_2);
 	sinCos(&SR, &CR, Rot.Roll * DIVIDE_BY_2);
 
-	FQuat RotationQuat;
+	SDK::FQuat RotationQuat;
 	RotationQuat.X = CR * SP * SY - SR * CP * CY;
 	RotationQuat.Y = -CR * SP * CY - SR * CP * SY;
 	RotationQuat.Z = CR * CP * SY - SR * SP * CY;
@@ -316,28 +316,28 @@ FQuat FRotToQuat(FRotator Rot)
 }
 
 template<typename T>
-T* SpawnActor(UClass* Class = T::StaticClass(), FVector Loc = {}, FRotator Rot = {}, AActor* Owner = nullptr)
+T* SpawnActor(SDK::UClass* Class = T::StaticClass(), SDK::FVector Loc = {}, SDK::FRotator Rot = {}, SDK::AActor* Owner = nullptr)
 {
-	FTransform Transform{};
-	Transform.Scale3D = FVector(1, 1, 1);
+	SDK::FTransform Transform{};
+	Transform.Scale3D = SDK::FVector(1, 1, 1);
 	Transform.Translation = Loc;
 	Transform.Rotation = FRotToQuat(Rot);
 
-	return (T*)GetStatics()->FinishSpawningActor(GetStatics()->BeginDeferredActorSpawnFromClass(GetWorld(), Class, Transform, ESpawnActorCollisionHandlingMethod::AlwaysSpawn, Owner), Transform);
+	return (T*)GetStatics()->FinishSpawningActor(GetStatics()->BeginDeferredActorSpawnFromClass(GetWorld(), Class, Transform, SDK::ESpawnActorCollisionHandlingMethod::AlwaysSpawn, Owner), Transform);
 }
 
 void Listen()
 {
-	GetWorld()->NetDriver = CreateNetDriver(GetEngine(), GetWorld(), FName(282));
+	GetWorld()->NetDriver = CreateNetDriver(GetEngine(), GetWorld(), SDK::FName(282));
 	if (!GetWorld()->NetDriver)
 	{
 		return;
 	}
-	GetWorld()->NetDriver->NetDriverName = FName(282);
+	GetWorld()->NetDriver->NetDriverName = SDK::FName(282);
 	GetWorld()->NetDriver->World = GetWorld(); // useless idk tbh but it crashes when I don't set this var
 
-	FString err;
-	FURL url = FURL();
+	SDK::FString err;
+	SDK::FURL url = SDK::FURL();
 	url.Port = 7777; // I would make this port something gay cuz yall mfs but I forgor I will get spammed for why not join
 	InitListenOG(GetWorld()->NetDriver, GetWorld(), url, false, err);
 	SetWorld(GetWorld()->NetDriver, GetWorld());
@@ -353,9 +353,9 @@ void Listen()
 	UptimeWebHook.send_embed("Server is up!", "Fortnite Version: *`8.51`*");
 }
 
-int GetPropOffset(UObject* Object, const std::string& PropertyName)
+int GetPropOffset(SDK::UObject* Object, const std::string& PropertyName)
 {
-	for (auto Class = Object->Class; Class; Class = (UClass*)Class->Super)
+	for (auto Class = Object->Class; Class; Class = (SDK::UClass*)Class->Super)
 	{
 		auto Property = Class->Children;
 		if (Property)
@@ -381,9 +381,9 @@ int GetPropOffset(UObject* Object, const std::string& PropertyName)
 	return 0;
 }
 
-AFortPickupAthena* SpawnPickup(FFortItemEntry& ItemEntry, FVector Loc, EFortPickupSourceTypeFlag SourceType, EFortPickupSpawnSource Source, int OverrideCount = -1)
+SDK::AFortPickupAthena* SpawnPickup(SDK::FFortItemEntry& ItemEntry, SDK::FVector Loc, SDK::EFortPickupSourceTypeFlag SourceType, SDK::EFortPickupSpawnSource Source, int OverrideCount = -1)
 {
-	auto SpawnedPickup = SpawnActor<AFortPickupAthena>(AFortPickupAthena::StaticClass(), Loc);
+	auto SpawnedPickup = SpawnActor<SDK::AFortPickupAthena>(SDK::AFortPickupAthena::StaticClass(), Loc);
 	SpawnedPickup->bRandomRotation = true;
 
 	SpawnedPickup->PrimaryPickupItemEntry = ItemEntry;
@@ -393,8 +393,8 @@ AFortPickupAthena* SpawnPickup(FFortItemEntry& ItemEntry, FVector Loc, EFortPick
 	SpawnedPickup->TossPickup(Loc, nullptr, -1, true, SourceType, Source);
 
 	SpawnedPickup->SetReplicateMovement(true);
-	SpawnedPickup->MovementComponent = (UProjectileMovementComponent*)GetStatics()->SpawnObject(UProjectileMovementComponent::StaticClass(), SpawnedPickup);
-	if (SourceType == EFortPickupSourceTypeFlag::Container)
+	SpawnedPickup->MovementComponent = (SDK::UProjectileMovementComponent*)GetStatics()->SpawnObject(SDK::UProjectileMovementComponent::StaticClass(), SpawnedPickup);
+	if (SourceType == SDK::EFortPickupSourceTypeFlag::Container)
 	{
 		SpawnedPickup->bTossedFromContainer = true;
 		SpawnedPickup->OnRep_TossedFromContainer();
@@ -403,9 +403,9 @@ AFortPickupAthena* SpawnPickup(FFortItemEntry& ItemEntry, FVector Loc, EFortPick
 	return SpawnedPickup;
 }
 
-AFortPickupAthena* SpawnPickup(UFortItemDefinition* ItemDef, int OverrideCount, int LoadedAmmo, FVector Loc, EFortPickupSourceTypeFlag SourceType, EFortPickupSpawnSource Source)
+SDK::AFortPickupAthena* SpawnPickup(SDK::UFortItemDefinition* ItemDef, int OverrideCount, int LoadedAmmo, SDK::FVector Loc, SDK::EFortPickupSourceTypeFlag SourceType, SDK::EFortPickupSpawnSource Source)
 {
-	auto SpawnedPickup = SpawnActor<AFortPickupAthena>(AFortPickupAthena::StaticClass(), Loc);
+	auto SpawnedPickup = SpawnActor<SDK::AFortPickupAthena>(SDK::AFortPickupAthena::StaticClass(), Loc);
 	SpawnedPickup->bRandomRotation = true;
 
 	auto& PickupEntry = SpawnedPickup->PrimaryPickupItemEntry;
@@ -418,9 +418,9 @@ AFortPickupAthena* SpawnPickup(UFortItemDefinition* ItemDef, int OverrideCount, 
 	SpawnedPickup->TossPickup(Loc, nullptr, -1, true, SourceType, Source);
 
 	SpawnedPickup->SetReplicateMovement(true);
-	SpawnedPickup->MovementComponent = (UProjectileMovementComponent*)GetStatics()->SpawnObject(UProjectileMovementComponent::StaticClass(), SpawnedPickup);
+	SpawnedPickup->MovementComponent = (SDK::UProjectileMovementComponent*)GetStatics()->SpawnObject(SDK::UProjectileMovementComponent::StaticClass(), SpawnedPickup);
 
-	if (SourceType == EFortPickupSourceTypeFlag::Container)
+	if (SourceType == SDK::EFortPickupSourceTypeFlag::Container)
 	{
 		SpawnedPickup->bTossedFromContainer = true;
 		SpawnedPickup->OnRep_TossedFromContainer();
@@ -430,8 +430,8 @@ AFortPickupAthena* SpawnPickup(UFortItemDefinition* ItemDef, int OverrideCount, 
 }
 
 static int WOW = 0;
-void (*SetMegaStormStuffidkREALOG)(AFortGameModeAthena*, int);
-void SetMegaStormStuffHOOK(AFortGameModeAthena* a1, int a2)
+void (*SetMegaStormStuffidkREALOG)(SDK::AFortGameModeAthena*, int);
+void SetMegaStormStuffHOOK(SDK::AFortGameModeAthena* a1, int a2)
 {
 	LOG_("a2: {}", a2);
 	if (!Globals::bLategame)

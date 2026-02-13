@@ -5,23 +5,23 @@
 
 struct LootRow
 {
-	UFortItemDefinition* ItemDefinition = nullptr;
+	SDK::UFortItemDefinition* ItemDefinition = nullptr;
 	int DropCount = 1;
 	int LoadedAmmo = 0;
 };
 
-std::map<EFortItemType, std::vector<LootRow>> LootRows;
+std::map<SDK::EFortItemType, std::vector<LootRow>> LootRows;
 
-int GetClipSize(UFortItemDefinition* ItemDef)
+int GetClipSize(SDK::UFortItemDefinition* ItemDef)
 {
-	if (auto RangedDef = Cast<UFortWeaponRangedItemDefinition>(ItemDef))
+	if (auto RangedDef = Cast<SDK::UFortWeaponRangedItemDefinition>(ItemDef))
 	{
 		auto DataTable = RangedDef->WeaponStatHandle.DataTable;
 		auto RowName = RangedDef->WeaponStatHandle.RowName;
 
 		if (DataTable && RowName.ComparisonIndex)
 		{
-			auto& RowMap = *(UE::TMap<FName, FFortRangedWeaponStats*>*)(__int64(DataTable) + 0x30);
+			auto& RowMap = *(UE::TMap<SDK::FName, SDK::FFortRangedWeaponStats*>*)(__int64(DataTable) + 0x30);
 			for (int i = 0; i < RowMap.Pairs.Elements.Data.Num(); ++i)
 			{
 				auto& ElementData = RowMap.Pairs.Elements.Data[i].ElementData;
@@ -40,7 +40,7 @@ int GetClipSize(UFortItemDefinition* ItemDef)
 	return 0;
 }
 
-bool YAYAYAY(UFortItemDefinition* a1)
+bool YAYAYAY(SDK::UFortItemDefinition* a1)
 {
 	for (auto& Mapa : LootRows)
 	{
@@ -96,28 +96,28 @@ void GetRandomMaterialCount(int* WoodOut, int* StoneOut, int* MetalOut)
 
 void InitLooting()
 {
-	UDataTable* LootPackagesDataTable = nullptr;
-	UDataTable* LootTierGroupDataTable = nullptr; // this is gonna be for proper looting with proper weights means later
+	SDK::UDataTable* LootPackagesDataTable = nullptr;
+	SDK::UDataTable* LootTierGroupDataTable = nullptr; // this is gonna be for proper looting with proper weights means later
 
 	auto Playlist = GetGameState()->CurrentPlaylistInfo.BasePlaylist;
 	if (Playlist->LootPackages.ObjectID.AssetPathName.ComparisonIndex)
 	{
-		LootPackagesDataTable = StaticLoadObject<UDataTable>(GetString()->Conv_NameToString(Playlist->LootPackages.ObjectID.AssetPathName).ToString());
+		LootPackagesDataTable = StaticLoadObject<SDK::UDataTable>(GetString()->Conv_NameToString(Playlist->LootPackages.ObjectID.AssetPathName).ToString());
 	}
 
 	if (!LootPackagesDataTable)
 	{
 		// Solos, Duos, Squads, Trios playlist doesn't have lootpackage and loottiergroup datatables maybe some others but I didn't check all
-		LootPackagesDataTable = StaticLoadObject<UDataTable>("/Game/Items/Datatables/AthenaLootPackages_Client.AthenaLootPackages_Client");
+		LootPackagesDataTable = StaticLoadObject<SDK::UDataTable>("/Game/Items/Datatables/AthenaLootPackages_Client.AthenaLootPackages_Client");
 	}
 
 	if (LootPackagesDataTable)
 	{
-		auto& RowMap = *(UE::TMap<FName, FFortLootPackageData*>*)(__int64(LootPackagesDataTable) + 0x30);
+		auto& RowMap = *(UE::TMap<SDK::FName, SDK::FFortLootPackageData*>*)(__int64(LootPackagesDataTable) + 0x30);
 		for (int i = 0; i < RowMap.Pairs.Elements.Data.Num(); ++i)
 		{
 			auto& CurrentRow = RowMap.Pairs.Elements.Data[i];
-			FName RowName = CurrentRow.ElementData.Value.First;
+			SDK::FName RowName = CurrentRow.ElementData.Value.First;
 			if (RowName.ComparisonIndex)
 			{
 				std::string RowNameStr = GetString()->Conv_NameToString(RowName).ToString();
@@ -131,27 +131,27 @@ void InitLooting()
 					LOG_("RowNameStr: {}", RowNameStr);
 					LootRow Row = LootRow();
 					std::string ItemDefStr = GetString()->Conv_NameToString(PackageData->ItemDefinition.GetAssetPathName()).ToString();
-					if (auto ItemDefinition = StaticLoadObject<UFortItemDefinition>(ItemDefStr))
+					if (auto ItemDefinition = StaticLoadObject<SDK::UFortItemDefinition>(ItemDefStr))
 					{
 						Row.ItemDefinition = ItemDefinition;
 						Row.DropCount = PackageData->Count;
-						EFortItemType Type;
+						SDK::EFortItemType Type;
 						Type = ItemDefinition->GetItemType();
 
-						if (Type == EFortItemType::WeaponRanged)
+						if (Type == SDK::EFortItemType::WeaponRanged)
 						{
-							auto WorldItemDef = (UFortWorldItemDefinition*)ItemDefinition;
+							auto WorldItemDef = (SDK::UFortWorldItemDefinition*)ItemDefinition;
 							if (WorldItemDef->GetAmmoWorldItemDefinition_BP() == ItemDefinition)
 							{
 								LOG_("WOW NOT A RANGED WEAPON");
-								Type = EFortItemType::Consumable;
+								Type = SDK::EFortItemType::Consumable;
 							}
 							Row.LoadedAmmo = GetClipSize(ItemDefinition);
 						}
 
 						if (ItemDefStr.contains("ItemData"))
 						{
-							Type = EFortItemType::WorldResource;
+							Type = SDK::EFortItemType::WorldResource;
 							Row.DropCount = 30;
 						}
 
@@ -166,11 +166,11 @@ void InitLooting()
 	// I gotta load the lootpackage datatable im too lazy to do it for now but ok real ong fr YAY
 }
 
-LootRow* GetRandomItem(EFortItemType ItemType = EFortItemType::WeaponRanged)
+LootRow* GetRandomItem(SDK::EFortItemType ItemType = SDK::EFortItemType::WeaponRanged)
 {
 	auto Item = &LootRows[ItemType][rand() % LootRows[ItemType].size()];
 
-	if (Item->ItemDefinition->Tier > EFortItemTier::III && rand() % 100 > 15)
+	if (Item->ItemDefinition->Tier > SDK::EFortItemTier::III && rand() % 100 > 15)
 		return GetRandomItem(ItemType);
 
 	return Item;
@@ -182,13 +182,13 @@ std::vector<LootRow*> GetFloorLoot() // SKUNKED (when is proper wxeighrs:  NEVER
 	auto bConsumable = rand() % 100 > 70; // 30% chance of consumable
 
 	if (bConsumable)
-		gdgameserver.push_back(GetRandomItem(EFortItemType::Consumable));
+		gdgameserver.push_back(GetRandomItem(SDK::EFortItemType::Consumable));
 	else
 	{
-		auto WeaponItem = GetRandomItem(EFortItemType::WeaponRanged);
+		auto WeaponItem = GetRandomItem(SDK::EFortItemType::WeaponRanged);
 		if (WeaponItem && WeaponItem->ItemDefinition)
 		{
-			auto ammoDef = ((UFortWorldItemDefinition*)WeaponItem->ItemDefinition)->GetAmmoWorldItemDefinition_BP();
+			auto ammoDef = ((SDK::UFortWorldItemDefinition*)WeaponItem->ItemDefinition)->GetAmmoWorldItemDefinition_BP();
 			if (ammoDef && ammoDef != WeaponItem->ItemDefinition)
 			{
 				gdgameserver.push_back(new LootRow{ ammoDef, ammoDef->DropCount });

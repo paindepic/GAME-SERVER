@@ -4,7 +4,7 @@
 namespace Inventory
 {
 
-	void Update(AFortPlayerController* Player, FFortItemEntry* Entry = nullptr)
+	void Update(SDK::AFortPlayerController* Player, SDK::FFortItemEntry* Entry = nullptr)
 	{
 		Player->WorldInventory->HandleInventoryLocalUpdate();
 
@@ -14,7 +14,7 @@ namespace Inventory
 			Player->WorldInventory->Inventory.MarkArrayDirty();
 	}
 
-	FFortItemEntry* FindItemEntry(AFortPlayerController* PC, FGuid& OtherGuid)
+	SDK::FFortItemEntry* FindItemEntry(SDK::AFortPlayerController* PC, SDK::FGuid& OtherGuid)
 	{
 		if (!PC || !PC->WorldInventory)
 			return nullptr;
@@ -28,7 +28,7 @@ namespace Inventory
 		return nullptr;
 	}
 
-	FFortItemEntry* FindItemEntry(AFortPlayerController* PC, UFortItemDefinition* ItemDef)
+	SDK::FFortItemEntry* FindItemEntry(SDK::AFortPlayerController* PC, SDK::UFortItemDefinition* ItemDef)
 	{
 		if (!PC || !PC->WorldInventory || !ItemDef)
 			return nullptr;
@@ -42,14 +42,14 @@ namespace Inventory
 		return nullptr;
 	}
 
-	UFortWorldItem* CreateItem(AFortPlayerController* Player, UFortItemDefinition* ItemDef, int Count = 1)
+	SDK::UFortWorldItem* CreateItem(SDK::AFortPlayerController* Player, SDK::UFortItemDefinition* ItemDef, int Count = 1)
 	{
-		auto WorldItem = (UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(Count, 0);
+		auto WorldItem = (SDK::UFortWorldItem*)ItemDef->CreateTemporaryItemInstanceBP(Count, 0);
 		WorldItem->SetOwningControllerForTemporaryItem(Player);
 		return WorldItem;
 	}
 
-	void RemoveItem(AFortPlayerController* Player, UFortItemDefinition* ItemDef, int Count = -1)
+	void RemoveItem(SDK::AFortPlayerController* Player, SDK::UFortItemDefinition* ItemDef, int Count = -1)
 	{
 		for (int j = 0; j < Player->WorldInventory->Inventory.ReplicatedEntries.Num(); j++)
 		{
@@ -79,7 +79,7 @@ namespace Inventory
 		Update(Player);
 	}
 
-	void RemoveItem(AFortPlayerController* Player, FGuid& ItemGuid, int Count = -1)
+	void RemoveItem(SDK::AFortPlayerController* Player, SDK::FGuid& ItemGuid, int Count = -1)
 	{
 		for (int j = 0; j < Player->WorldInventory->Inventory.ReplicatedEntries.Num(); j++)
 		{
@@ -109,16 +109,16 @@ namespace Inventory
 		Update(Player);
 	}
 
-	EFortQuickBars GetQuickBars(UFortItemDefinition* ItemDefinition)
+	SDK::EFortQuickBars GetQuickBars(SDK::UFortItemDefinition* ItemDefinition)
 	{
-		if (!ItemDefinition->IsA(UFortWeaponMeleeItemDefinition::StaticClass()) && !ItemDefinition->IsA(UFortEditToolItemDefinition::StaticClass()) &&
-			!ItemDefinition->IsA(UFortBuildingItemDefinition::StaticClass()) && !ItemDefinition->IsA(UFortAmmoItemDefinition::StaticClass()) && !ItemDefinition->IsA(UFortResourceItemDefinition::StaticClass()) && !ItemDefinition->IsA(UFortTrapItemDefinition::StaticClass()))
-			return EFortQuickBars::Primary;
+		if (!ItemDefinition->IsA(SDK::UFortWeaponMeleeItemDefinition::StaticClass()) && !ItemDefinition->IsA(SDK::UFortEditToolItemDefinition::StaticClass()) &&
+			!ItemDefinition->IsA(SDK::UFortBuildingItemDefinition::StaticClass()) && !ItemDefinition->IsA(SDK::UFortAmmoItemDefinition::StaticClass()) && !ItemDefinition->IsA(SDK::UFortResourceItemDefinition::StaticClass()) && !ItemDefinition->IsA(SDK::UFortTrapItemDefinition::StaticClass()))
+			return SDK::EFortQuickBars::Primary;
 
-		return EFortQuickBars::Secondary;
+		return SDK::EFortQuickBars::Secondary;
 	}
 
-	bool IsInventoryFull(AFortPlayerController* PC)
+	bool IsInventoryFull(SDK::AFortPlayerController* PC)
 	{
 		int aaaaaa = 0;
 		auto InstancesPtr = &PC->WorldInventory->Inventory.ItemInstances;
@@ -126,7 +126,7 @@ namespace Inventory
 		{
 			if (InstancesPtr->operator[](i))
 			{
-				if (GetQuickBars(InstancesPtr->operator[](i)->ItemEntry.ItemDefinition) == EFortQuickBars::Primary)
+				if (GetQuickBars(InstancesPtr->operator[](i)->ItemEntry.ItemDefinition) == SDK::EFortQuickBars::Primary)
 				{
 					aaaaaa++;
 
@@ -141,7 +141,7 @@ namespace Inventory
 		return aaaaaa >= 5;
 	}
 
-	FFortItemEntry* AddItem(AFortPlayerController* Player, UFortItemDefinition* ItemDef, int Count = 1, int LoadedAmmo = -1, bool bForceCreate = false)
+	SDK::FFortItemEntry* AddItem(SDK::AFortPlayerController* Player, SDK::UFortItemDefinition* ItemDef, int Count = 1, int LoadedAmmo = -1, bool bForceCreate = false)
 	{
 		if (!ItemDef || !Player || !Player->WorldInventory)
 			return nullptr;
@@ -196,15 +196,15 @@ namespace Inventory
 }
 
 // 0x18A7A60
-void (*sub_7FF6B9B17A60_OG)(AFortWeapon* a1, unsigned int a2); // idk if calling the original back if it does some stuff I haven't checked the original too much
-void sub_7FF6B9B17A60(AFortWeapon* a1, unsigned int a2)
+void (*sub_7FF6B9B17A60_OG)(SDK::AFortWeapon* a1, unsigned int a2); // idk if calling the original back if it does some stuff I haven't checked the original too much
+void sub_7FF6B9B17A60(SDK::AFortWeapon* a1, unsigned int a2)
 {
 	if (a1->WeaponData)
 	{
 		LOG_("foggot");
-		if (auto Pawn = Cast<AFortPawn>(a1->GetOwner()))
+		if (auto Pawn = Cast<SDK::AFortPawn>(a1->GetOwner()))
 		{
-			if (auto PC = Cast<AFortPlayerController>(Pawn->Controller))
+			if (auto PC = Cast<SDK::AFortPlayerController>(Pawn->Controller))
 			{
 				if (auto AmmoDef = a1->WeaponData->GetAmmoWorldItemDefinition_BP())
 				{
@@ -227,15 +227,15 @@ void sub_7FF6B9B17A60(AFortWeapon* a1, unsigned int a2)
 }
 
 // UFunction: /Game/Abilities/Weapons/Ranged/GA_Ranged_GenericDamage.GA_Ranged_GenericDamage_C.K2_CommitExecute
-void (*K2_CommitExecute)(UFortGameplayAbility* a1);
-void K2_CommitExecuteHook(UFortGameplayAbility* a1)
+void (*K2_CommitExecute)(SDK::UFortGameplayAbility* a1);
+void K2_CommitExecuteHook(SDK::UFortGameplayAbility* a1)
 {
-	if (a1->IsA(UGA_Ranged_GenericDamage_C::StaticClass()))
+	if (a1->IsA(SDK::UGA_Ranged_GenericDamage_C::StaticClass()))
 	{
 		LOG_("works ");
 		if (auto Pawn = a1->GetActivatingPawn())
 		{
-			if (auto PC = (AFortPlayerController*)Pawn->Controller) // Cast??
+			if (auto PC = (SDK::AFortPlayerController*)Pawn->Controller) // Cast??
 			{
 				if (Pawn->CurrentWeapon)
 				{
