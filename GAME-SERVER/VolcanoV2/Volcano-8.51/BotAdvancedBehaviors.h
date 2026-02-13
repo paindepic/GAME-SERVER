@@ -228,12 +228,12 @@ namespace BotSystem
 
                 // FindLookAtRotation expects non-const references
                 SDK::FVector BotLocation = Bot.Pawn->K2_GetActorLocation();
-                SDK::FRotator AimRot = SDK::UKismetMathLibrary::FindLookAtRotation(BotLocation, AimPos);
+                SDK::FRotator AimRot = GetMath()->FindLookAtRotation(BotLocation, AimPos);
 
                 // Smooth rotation for natural feel
                 float RotationSpeed = 5.0f + static_cast<float>(static_cast<int>(Bot.Config.Difficulty)) * 5.0f;
                 auto CurrentRot = Bot.Pawn->K2_GetActorRotation();
-                AimRot = SDK::UKismetMathLibrary::RInterpTo(CurrentRot, AimRot, 0.016f, RotationSpeed);
+                AimRot = GetMath()->RInterpTo(CurrentRot, AimRot, 0.016f, RotationSpeed);
 
                 Bot.Pawn->K2_SetActorRotation(AimRot, false);
 
@@ -389,12 +389,13 @@ namespace BotSystem
             FVectorHelpers::Normalize(MoveDirection);
 
             // Calculate rotation to face movement direction
-            SDK::FRotator MoveRotation = SDK::UKismetMathLibrary::FindLookAtRotation(CurrentLocation, Target);
+            SDK::FVector TargetLocation = Target;
+            SDK::FRotator MoveRotation = GetMath()->FindLookAtRotation(CurrentLocation, TargetLocation);
 
             // Smooth rotation
             auto CurrentRot = Bot.Pawn->K2_GetActorRotation();
             float RotationSpeed = 10.0f;
-            MoveRotation = SDK::UKismetMathLibrary::RInterpTo(CurrentRot, MoveRotation, 0.016f, RotationSpeed);
+            MoveRotation = GetMath()->RInterpTo(CurrentRot, MoveRotation, 0.016f, RotationSpeed);
 
             Bot.Pawn->K2_SetActorRotation(MoveRotation, false);
 

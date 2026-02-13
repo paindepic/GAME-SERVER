@@ -29,7 +29,7 @@ DWORD Main(LPVOID)
     LOG_("skidada!da!ad!dad!ad!a");
 
 
-    ((UKismetSystemLibrary*)UKismetSystemLibrary::StaticClass()->DefaultObject)->ExecuteConsoleCommand(GetWorld(), L"open Athena_Terrain", nullptr);
+    ((UKismetSystemLibrary*)UKismetSystemLibrary::StaticClass()->DefaultObject)->ExecuteConsoleCommand(static_cast<SDK::UObject*>(GetWorld()), L"open Athena_Terrain", nullptr);
     GetEngine()->GameInstance->LocalPlayers.Remove(0);
 
     void** VTAblAAAA = *(void***)GetDefObj<UAbilitySystemComponent>();

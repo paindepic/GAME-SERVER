@@ -17,13 +17,16 @@ static std::ofstream AAAA("FortniteLogs.log");
 #define LOG_(...) { std::cout << "VolcanoV2 : " << std::format(__VA_ARGS__) << std::endl; AAAA << std::format(__VA_ARGS__) << std::endl; }
 
 // Forward declarations for global helper functions used by bot system
-class UGameplayStatics;
-class UWorld;
-class AFortGameStateAthena;
+namespace SDK
+{
+    class UGameplayStatics;
+    class UWorld;
+    class AFortGameStateAthena;
+}
 
-UGameplayStatics* GetStatics();
-UWorld* GetWorld();
-AFortGameStateAthena* GetGameState();
+SDK::UGameplayStatics* GetStatics();
+SDK::UWorld* GetWorld();
+SDK::AFortGameStateAthena* GetGameState();
 
 // Forward declaration for bot system update
 namespace BotSystem
@@ -88,8 +91,8 @@ uintptr_t GetOffsetBRUH(uintptr_t Offset)
     return __int64(GetModuleHandleW(0)) + Offset;
 }
 
-static UNetDriver* (*CreateNetDriver)(UEngine*, UWorld*, FName) = decltype(CreateNetDriver)(GetOffsetBRUH(0x2FBED30));
-static void (*SetWorld)(UNetDriver*, UWorld*) = decltype(SetWorld)(GetOffsetBRUH(0x2D38590));
+static UNetDriver* (*CreateNetDriver)(UEngine*, SDK::UWorld*, FName) = decltype(CreateNetDriver)(GetOffsetBRUH(0x2FBED30));
+static void (*SetWorld)(UNetDriver*, SDK::UWorld*) = decltype(SetWorld)(GetOffsetBRUH(0x2D38590));
 static bool (*InitListenOG)(void*, void*, FURL&, bool, FString&) = decltype(InitListenOG)(GetOffsetBRUH(0x634C10));
 static void (*ServerReplicateActors)(void*);
 
@@ -186,7 +189,7 @@ __int64 __fastcall NoReserve(__int64 a1, __int64 a2, __int64 a3, char a4)
     return 0;
 }
 
-__int64 UWorldGetNetMode(UWorld* a1)
+__int64 UWorldGetNetMode(SDK::UWorld* a1)
 {
     return 1;
 }
@@ -208,14 +211,14 @@ UFortEngine* GetEngine()
     return clapped;
 }
 
-UWorld* GetWorld()
+SDK::UWorld* GetWorld()
 {
     return GetEngine()->GameViewport->World;
 }
 
-AFortGameStateAthena* GetGameState()
+SDK::AFortGameStateAthena* GetGameState()
 {
-    return (AFortGameStateAthena*)GetWorld()->GameState;
+    return (SDK::AFortGameStateAthena*)GetWorld()->GameState;
 }
 
 AFortGameModeAthena* GetGameMode()
@@ -228,9 +231,9 @@ UFortKismetLibrary* GetFortKismet()
     return GetDefObj<UFortKismetLibrary>();
 }
 
-UGameplayStatics* GetStatics()
+SDK::UGameplayStatics* GetStatics()
 {
-    return GetDefObj<UGameplayStatics>();
+    return GetDefObj<SDK::UGameplayStatics>();
 }
 
 UKismetStringLibrary* GetString()
@@ -238,9 +241,9 @@ UKismetStringLibrary* GetString()
     return GetDefObj<UKismetStringLibrary>();
 }
 
-UKismetMathLibrary* GetMath()
+SDK::UKismetMathLibrary* GetMath()
 {
-    return GetDefObj<UKismetMathLibrary>();
+    return GetDefObj<SDK::UKismetMathLibrary>();
 }
 
 void VirtualHook(void* Objce, int Index, void* Detour, void** OG = nullptr)
