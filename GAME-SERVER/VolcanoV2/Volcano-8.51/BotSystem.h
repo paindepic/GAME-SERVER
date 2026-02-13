@@ -401,7 +401,12 @@ namespace BotSystem
                 return false;
 
             // Use global GetStatics and GetWorld functions from framework.h
-            auto CurrentTime = GetStatics()->GetTimeSeconds(GetWorld());
+            auto Statics = GetStatics();
+            auto World = GetWorld();
+            if (!Statics || !World)
+                return false;
+
+            float CurrentTime = Statics->GetTimeSeconds(World);
             if (CurrentTime - LastSpawnTime < SpawnInterval)
                 return false;
 
@@ -469,7 +474,12 @@ namespace BotSystem
                 return;
 
             // Use global GetStatics and GetWorld functions from framework.h
-            auto CurrentTime = GetStatics()->GetTimeSeconds(GetWorld());
+            auto Statics = GetStatics();
+            auto World = GetWorld();
+            if (!Statics || !World)
+                return;
+
+            float CurrentTime = Statics->GetTimeSeconds(World);
 
             // Check if we should change state
             if (CurrentTime - Bot.LastActionTime >= Bot.StateChangeCooldown)
@@ -564,13 +574,18 @@ namespace BotSystem
 
             for (int i = 0; i < GameState->PlayerArray.Num(); i++)
             {
-                auto PlayerState = GameState->PlayerArray[i];
+                auto PlayerState = decltype(GameState->PlayerArray[i]){};
+                PlayerState = GameState->PlayerArray[i];
                 if (!PlayerState)
                     continue;
 
                 // Skip bots and teammates - using AFortPlayerStateAthena for TeamIndex
-                auto FortPlayerState = static_cast<SDK::AFortPlayerStateAthena*>(PlayerState);
-                auto BotPlayerState = static_cast<SDK::AFortPlayerStateAthena*>(Bot.Controller->PlayerState);
+                auto FortPlayerState = static_cast<SDK::AFortPlayerStateAthena*>(nullptr);
+                FortPlayerState = static_cast<SDK::AFortPlayerStateAthena*>(PlayerState);
+                auto BotPlayerState = static_cast<SDK::AFortPlayerStateAthena*>(Bot.Controller ? Bot.Controller->PlayerState : nullptr);
+
+                if (!FortPlayerState || !BotPlayerState)
+                    continue;
 
                 if (FortPlayerState->TeamIndex == BotPlayerState->TeamIndex)
                     continue;
@@ -622,7 +637,7 @@ namespace BotSystem
             // Calculate rotation to aim at target
             // FindLookAtRotation takes non-const references, so create temporary non-const variables
             SDK::FVector BotLocation = Bot.Pawn->K2_GetActorLocation();
-            SDK::FRotator AimRotation = SDK::UKismetMathLibrary::FindLookAtRotation(BotLocation, AimLocation);
+            SDK::FRotator AimRotation = GetMath()->FindLookAtRotation(BotLocation, AimLocation);
             Bot.Pawn->K2_SetActorRotation(AimRotation, false);
         }
 
