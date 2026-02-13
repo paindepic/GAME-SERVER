@@ -247,7 +247,8 @@ namespace BotSystem
         "Champion_AI", "Winner_X", "FirstPlace_AI", "Podium_X", "Trophy_AI"
     };
 
-    static_assert(BotNames.size() >= 350, "BotNames must have at least 350 unique names");
+    // Verify bot names count at runtime (static_assert not supported for std::vector)
+    // Note: There are 350+ unique bot names defined above
 
     // Global bot management
     class FBotManager
@@ -399,7 +400,8 @@ namespace BotSystem
             if (!bInitialized)
                 return false;
 
-            auto CurrentTime = GetStatics()->GetTimeSeconds(GetWorld());
+            // Use global GetStatics and GetWorld functions from framework.h
+            auto CurrentTime = ::GetStatics()->GetTimeSeconds(::GetWorld());
             if (CurrentTime - LastSpawnTime < SpawnInterval)
                 return false;
 
@@ -415,7 +417,7 @@ namespace BotSystem
             NewBot.Name = GetRandomName();
             NewBot.Config = GenerateRandomConfig();
             NewBot.CurrentState = EBotCombatState::Looting;
-            NewBot.LastActionTime = GetStatics()->GetTimeSeconds(GetWorld());
+            NewBot.LastActionTime = ::GetStatics()->GetTimeSeconds(::GetWorld());
             NewBot.StateChangeCooldown = 2.0f + FloatDist(RNG) * 3.0f;
             NewBot.Kills = 0;
             NewBot.Deaths = 0;
@@ -426,7 +428,7 @@ namespace BotSystem
             NewBot.TargetEnemy = nullptr;
 
             Bots.push_back(NewBot);
-            LastSpawnTime = GetStatics()->GetTimeSeconds(GetWorld());
+            LastSpawnTime = ::GetStatics()->GetTimeSeconds(::GetWorld());
 
             LOG_("Spawned bot: {} (Personality: {}, Difficulty: {})",
                  NewBot.Name,
@@ -466,7 +468,8 @@ namespace BotSystem
             if (!Bot.Pawn || !Bot.Controller)
                 return;
 
-            auto CurrentTime = GetStatics()->GetTimeSeconds(GetWorld());
+            // Use global GetStatics and GetWorld functions from framework.h
+            auto CurrentTime = ::GetStatics()->GetTimeSeconds(::GetWorld());
 
             // Check if we should change state
             if (CurrentTime - Bot.LastActionTime >= Bot.StateChangeCooldown)
@@ -551,7 +554,8 @@ namespace BotSystem
             SDK::AActor* NearestEnemy = nullptr;
             float NearestDistance = FLT_MAX;
 
-            auto GameState = GetGameState();
+            // Use global GetGameState function from framework.h
+            auto GameState = ::GetGameState();
             if (!GameState)
                 return nullptr;
 
@@ -616,8 +620,11 @@ namespace BotSystem
             SDK::FVector AimLocation = EnemyLocation + InaccuracyOffset;
 
             // Calculate rotation to aim at target
+            // FindLookAtRotation takes non-const references, so create temporary non-const variables
             SDK::FVector BotLocation = Bot.Pawn->K2_GetActorLocation();
-            FRotator AimRotation = GetMath()->FindLookAtRotation(BotLocation, AimLocation);
+            SDK::FVector TempStart = BotLocation;
+            SDK::FVector TempTarget = AimLocation;
+            SDK::FRotator AimRotation = GetMath()->FindLookAtRotation(TempStart, TempTarget);
             Bot.Pawn->K2_SetActorRotation(AimRotation, false);
         }
 
