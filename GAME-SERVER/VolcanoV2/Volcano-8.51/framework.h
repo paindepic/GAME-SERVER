@@ -509,9 +509,6 @@ void SetMegaStormStuffHOOK(AFortGameModeAthena* a1, int a2)
             GameState->SafeZoneIndicator->SafeZoneFinishShrinkTime = GameState->SafeZoneIndicator->SafeZoneStartShrinkTime + ShrinkTime;
         }
         
-        // Set storm damage values
-        GameState->SafeZoneIndicator->DamageType = EAthenaSafeZoneDamageType::Storm;
-        
         // Set initial radius based on zone number
         float BaseRadius = 20000.0f;  // Starting radius
         float CurrentRadius = BaseRadius * std::pow(0.5f, static_cast<float>(WOW));

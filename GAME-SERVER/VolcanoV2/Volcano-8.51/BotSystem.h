@@ -537,7 +537,9 @@ namespace BotSystem
             auto PlayerStateClass = SDK::AFortPlayerStateAthena::StaticClass();
             if (PlayerStateClass)
             {
-                BotPlayerState = static_cast<SDK::AFortPlayerStateAthena*>(World->SpawnActor(PlayerStateClass));
+                SDK::FVector SpawnLoc{0.0f, 0.0f, 0.0f};
+                SDK::FRotator SpawnRot{0.0f, 0.0f, 0.0f};
+                BotPlayerState = SpawnActor<SDK::AFortPlayerStateAthena>(PlayerStateClass, SpawnLoc, SpawnRot, BotController);
             }
 
             if (BotPlayerState)
@@ -545,12 +547,15 @@ namespace BotSystem
                 // Set bot name in PlayerState
                 std::wstring BotNameW(NewBot.Name.begin(), NewBot.Name.end());
                 FString BotNameFString(BotNameW.c_str());
-                BotPlayerState->SetPlayerName(BotNameFString);
+                BotPlayerState->PlayerName = BotNameFString;
+                BotPlayerState->PlayerNamePrivate = BotNameFString;
+                BotPlayerState->OnRep_PlayerName();
                 
                 // Assign a unique team to each bot for solo mode
                 static int BotTeamIndex = 50;  // Start bot teams at 50 to avoid conflicts
-                BotPlayerState->TeamIndex = BotTeamIndex++;
-                BotPlayerState->OnRep_TeamIndex();
+                uint8 OldTeamIndex = BotPlayerState->TeamIndex;
+                BotPlayerState->TeamIndex = static_cast<uint8>(BotTeamIndex++);
+                BotPlayerState->OnRep_TeamIndex(OldTeamIndex);
             }
 
             // Create Pawn for the bot
@@ -601,15 +606,14 @@ namespace BotSystem
             if (BotPlayerState && GameState)
             {
                 GameState->PlayerArray.Add(BotPlayerState);
-                GameState->OnRep_PlayerArray();
             }
 
             // Increment player count
             if (GameState)
             {
-                GameState->PlayerCount++;
                 GameState->TotalPlayers++;
-                GameState->OnRep_PlayerCount();
+                GameState->PlayersLeft++;
+                GameState->OnRep_PlayersLeft();
             }
 
             // Select landing location for battle bus phase
