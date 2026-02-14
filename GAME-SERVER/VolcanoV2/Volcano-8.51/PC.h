@@ -13,6 +13,12 @@
 static void *(*sub_7FF6B99CFE30)(void *, void *) =
     decltype(sub_7FF6B99CFE30)(GetOffsetBRUH(0x175FE30));
 void ServerAcknowledgePossessionHook(AFortPlayerController *PC, APawn *P) {
+  // Validate PC and Pawn before dereferencing
+  if (!PC || !P) {
+    LOG_("ERROR: PC or P is null in ServerAcknowledgePossessionHook");
+    return;
+  }
+  
   PC->AcknowledgedPawn = P;
 
   auto PlayerState = (AFortPlayerStateAthena *)PC->PlayerState;
@@ -36,18 +42,34 @@ void ServerAcknowledgePossessionHook(AFortPlayerController *PC, APawn *P) {
 // TODO: check the original
 void (*ServerReadyToStartMatchOG)(AController *);
 void ServerReadyToStartMatchHook(AFortPlayerController *PC) {
-  if (PC) {
-    auto PlayerState = (AFortPlayerStateAthena *)PC->PlayerState;
-    if (PlayerState) {
-      GrantAbilitySet(PlayerState);
-    }
+  if (!PC) {
+    return;
+  }
+  
+  // Validate world and game mode before proceeding
+  auto World = GetWorld();
+  auto GameMode = GetGameMode();
+  if (!World || !GameMode) {
+    LOG_("ERROR: World or GameMode is null in ServerReadyToStartMatchHook");
+    return ServerReadyToStartMatchOG(PC);
+  }
 
-    // Inventory::Setup(PC); // YOU FKN STUPID NAX!
+  auto PlayerState = (AFortPlayerStateAthena *)PC->PlayerState;
+  if (PlayerState) {
+    GrantAbilitySet(PlayerState);
+  }
 
-    for (int i = 0; i < GetGameMode()->StartingItems.Num(); i++) {
-      Inventory::AddItem(PC, GetGameMode()->StartingItems[i].Item,
-                         GetGameMode()->StartingItems[i].Count);
+  // Inventory::Setup(PC); // YOU FKN STUPID NAX!
+
+  // Add null check for StartingItems access
+  if (GameMode->StartingItems.Num() > 0) {
+    for (int i = 0; i < GameMode->StartingItems.Num(); i++) {
+      if (GameMode->StartingItems[i].Item) {
+        Inventory::AddItem(PC, GameMode->StartingItems[i].Item,
+                           GameMode->StartingItems[i].Count);
+      }
     }
+  }
 
     static auto YAYA = UObject::FindObject<UAthenaPickaxeItemDefinition>(
         "DefaultPickaxe.DefaultPickaxe");
@@ -107,13 +129,18 @@ void ServerReadyToStartMatchHook(AFortPlayerController *PC) {
     PlayerState->OnRep_TeamIndex(0);
     PlayerState->OnRep_SquadId();
 
+    // Validate GameState before accessing GameMemberInfoArray
+    auto GameState = GetGameState();
+    if (GameState) {
+      GameState->GameMemberInfoArray.MarkArrayDirty();
+    }
+    
     /*FGameMemberInfo test{-1,-1,-1};  // DONT USE IT SKIDDAS
     test.TeamIndex = PlayerState->TeamIndex;
     test.SquadId = PlayerState->SquadId;
     test.MemberUniqueId = PlayerState->UniqueId;
 
     GetGameState()->GameMemberInfoArray.Members.Add(test);*/
-    GetGameState()->GameMemberInfoArray.MarkArrayDirty();
 
     static bool bTest = false;
     if (!bTest) {
@@ -128,11 +155,19 @@ void ServerReadyToStartMatchHook(AFortPlayerController *PC) {
 }
 
 void ServerExecuteInventoryItem(AFortPlayerController *PC, FGuid &ItemGuid) {
+  // Validate player controller
+  if (!PC) {
+    LOG_("ERROR: PC is null in ServerExecuteInventoryItem");
+    return;
+  }
+  
   if (auto Pawn = (AFortPlayerPawn *)PC->Pawn) {
     if (auto ItemEntry = Inventory::FindItemEntry(PC, ItemGuid)) {
-      Pawn->EquipWeaponDefinition(
-          (UFortWeaponItemDefinition *)ItemEntry->ItemDefinition,
-          ItemEntry->ItemGuid);
+      if (ItemEntry->ItemDefinition) {
+        Pawn->EquipWeaponDefinition(
+            (UFortWeaponItemDefinition *)ItemEntry->ItemDefinition,
+            ItemEntry->ItemGuid);
+      }
     }
   }
 }
@@ -143,17 +178,37 @@ static bool (*CantBuild)(SDK::UWorld *, SDK::UObject *, FVector, FRotator, char,
 void ServerCreateBuildingActorHook(
     AFortPlayerControllerAthena *PC,
     FCreateBuildingActorData &CreateBuildingData) {
+  // Validate player controller
+  if (!PC) {
+    LOG_("ERROR: PC is null in ServerCreateBuildingActorHook");
+    return;
+  }
+  
+  // Validate world
+  auto World = GetWorld();
+  if (!World) {
+    LOG_("ERROR: World is null in ServerCreateBuildingActorHook");
+    return;
+  }
+  
   // auto Class = PC->BroadcastRemoteClientInfo->RemoteBuildableClass.Get(); //
   // 0x28D8
   auto Class = (*(AFortBroadcastRemoteClientInfo **)(__int64(PC) + 0x28D8))
                    ->RemoteBuildableClass.Get();
+  if (!Class) {
+    LOG_("ERROR: Class is null in ServerCreateBuildingActorHook");
+    return;
+  }
+  
   TArray<AActor *> BuildingActorsToDestroy;
   char Result;
-  if (!CantBuild(GetWorld(), Class, CreateBuildingData.BuildLoc,
+  if (!CantBuild(World, Class, CreateBuildingData.BuildLoc,
                  CreateBuildingData.BuildRot, CreateBuildingData.bMirrored,
                  &BuildingActorsToDestroy, &Result)) {
     for (int i = 0; i < BuildingActorsToDestroy.Num(); i++) {
-      BuildingActorsToDestroy[i]->K2_DestroyActor();
+      if (BuildingActorsToDestroy[i]) {
+        BuildingActorsToDestroy[i]->K2_DestroyActor();
+      }
     }
     BuildingActorsToDestroy.Free();
 
@@ -161,37 +216,50 @@ void ServerCreateBuildingActorHook(
             Class, CreateBuildingData.BuildLoc, CreateBuildingData.BuildRot)) {
       NewBuilding->InitializeKismetSpawnedBuildingActor(NewBuilding, PC, true);
       NewBuilding->bPlayerPlaced = true;
-      // *(uint8*)(__int64(NewBuilding) + 0x403) =
-      // ((AFortPlayerStateAthena*)PC->PlayerState)->TeamIndex;
-      NewBuilding->Team =
-          EFortTeam(((AFortPlayerStateAthena *)PC->PlayerState)->TeamIndex);
-      NewBuilding->TeamIndex =
-          ((AFortPlayerStateAthena *)PC->PlayerState)->TeamIndex;
-      NewBuilding->OnRep_Team();
+      
+      // Validate player state before accessing TeamIndex
+      auto PlayerState = (AFortPlayerStateAthena *)PC->PlayerState;
+      if (PlayerState) {
+        NewBuilding->Team = EFortTeam(PlayerState->TeamIndex);
+        NewBuilding->TeamIndex = PlayerState->TeamIndex;
+        NewBuilding->OnRep_Team();
+      }
 
-      if (!PC->bBuildFree)
-        Inventory::RemoveItem(PC,
-                              GetFortKismet()->K2_GetResourceItemDefinition(
-                                  NewBuilding->ResourceType),
-                              10);
+      if (!PC->bBuildFree) {
+        auto FortKismet = GetFortKismet();
+        if (FortKismet) {
+          Inventory::RemoveItem(PC,
+                                FortKismet->K2_GetResourceItemDefinition(
+                                    NewBuilding->ResourceType),
+                                10);
+        }
+      }
     }
   }
 }
 
 void ServerBeginEditingBuildingActorHook(
     AFortPlayerController *PC, ABuildingSMActor *BuildingActorToEdit) {
+  // Validate player controller and building actor
+  if (!PC || !BuildingActorToEdit) {
+    LOG_("ERROR: PC or BuildingActorToEdit is null in ServerBeginEditingBuildingActorHook");
+    return;
+  }
+  
   auto Pawn = (AFortPlayerPawnAthena *)PC->Pawn;
-  if (Pawn && BuildingActorToEdit) {
+  if (Pawn && Pawn->CurrentWeapon) {
     static auto EditToolDef = StaticFindObject<UFortItemDefinition>(
         "/Game/Items/Weapons/BuildingTools/EditTool.EditTool");
-    if (Pawn->CurrentWeapon->WeaponData != EditToolDef) {
+    if (EditToolDef && Pawn->CurrentWeapon->WeaponData != EditToolDef) {
       if (auto EditToolEntry = Inventory::FindItemEntry(PC, EditToolDef))
         PC->ServerExecuteInventoryItem(EditToolEntry->ItemGuid);
     }
 
     auto EditTool = (AFortWeap_EditingTool *)Pawn->CurrentWeapon;
-    EditTool->EditActor = BuildingActorToEdit;
-    EditTool->OnRep_EditActor();
+    if (EditTool) {
+      EditTool->EditActor = BuildingActorToEdit;
+      EditTool->OnRep_EditActor();
+    }
     BuildingActorToEdit->EditingPlayer =
         (AFortPlayerStateAthena *)PC->PlayerState;
     BuildingActorToEdit->OnRep_EditingPlayer();
@@ -221,14 +289,19 @@ void ServerEditBuildingActorHook(AFortPlayerController *PC,
 
 void ServerEndEditingBuildingActorHook(
     AFortPlayerController *PC, ABuildingSMActor *BuildingActorToStopEditing) {
-  if (PC && PC->Pawn && BuildingActorToStopEditing) {
+  // Validate player controller and building actor
+  if (!PC || !BuildingActorToStopEditing) {
+    LOG_("ERROR: PC or BuildingActorToStopEditing is null in ServerEndEditingBuildingActorHook");
+    return;
+  }
+  
+  if (PC->Pawn) {
     BuildingActorToStopEditing->EditingPlayer = nullptr;
     BuildingActorToStopEditing->OnRep_EditingPlayer();
 
-    AFortWeap_EditingTool *EditTool =
-        (AFortWeap_EditingTool *)((APlayerPawn_Athena_C *)PC->Pawn)
-            ->CurrentWeapon;
-    if (EditTool) {
+    auto Pawn = (APlayerPawn_Athena_C *)PC->Pawn;
+    if (Pawn && Pawn->CurrentWeapon) {
+      AFortWeap_EditingTool *EditTool = (AFortWeap_EditingTool *)Pawn->CurrentWeapon;
       EditTool->bEditConfirmed = true;
       EditTool->EditActor = nullptr;
       EditTool->OnRep_EditActor();
@@ -237,23 +310,45 @@ void ServerEndEditingBuildingActorHook(
 }
 
 void ServerClientIsReadyToRespawn(AFortPlayerControllerAthena *PC) {
+  // Validate player controller
+  if (!PC) {
+    LOG_("ERROR: PC is null in ServerClientIsReadyToRespawn");
+    return;
+  }
+  
   auto PlayerState = (AFortPlayerStateAthena *)PC->PlayerState;
+  if (!PlayerState) {
+    LOG_("ERROR: PlayerState is null in ServerClientIsReadyToRespawn");
+    return;
+  }
+  
   auto &RespawnData = PlayerState->RespawnData;
   if (RespawnData.bRespawnDataAvailable && RespawnData.bServerIsReady) {
     RespawnData.bClientIsReady = true;
+
+    // Validate GameMode before using
+    auto GameMode = GetGameMode();
+    if (!GameMode) {
+      LOG_("ERROR: GameMode is null in ServerClientIsReadyToRespawn");
+      return;
+    }
 
     FTransform Transform{};
     Transform.Translation = RespawnData.RespawnLocation;
     Transform.Scale3D = FVector{1, 1, 1};
     auto Pawn =
-        (AFortPlayerPawnAthena *)GetGameMode()->SpawnDefaultPawnAtTransform(
+        (AFortPlayerPawnAthena *)GameMode->SpawnDefaultPawnAtTransform(
             PC, Transform);
-    PC->Possess(Pawn);
-    Pawn->SetMaxHealth(100);
-    Pawn->SetHealth(100);
-    Pawn->SetMaxShield(100);
-    Pawn->SetShield(100);
-    PC->RespawnPlayerAfterDeath(true);
+    if (Pawn) {
+      PC->Possess(Pawn);
+      Pawn->SetMaxHealth(100);
+      Pawn->SetHealth(100);
+      Pawn->SetMaxShield(100);
+      Pawn->SetShield(100);
+      PC->RespawnPlayerAfterDeath(true);
+    } else {
+      LOG_("ERROR: Failed to spawn pawn in ServerClientIsReadyToRespawn");
+    }
   }
 }
 
@@ -262,6 +357,12 @@ void (*GetPlayerViewPointOG)(AFortPlayerController *a1, FVector a2,
                              FRotator a3);
 void GetPlayerViewPointHook(AFortPlayerController *a1, FVector &a2,
                             FRotator &a3) {
+  // Validate player controller
+  if (!a1) {
+    LOG_("ERROR: a1 is null in GetPlayerViewPointHook");
+    return GetPlayerViewPointOG(a1, a2, a3);
+  }
+  
   if (auto Pawn = a1->Pawn) {
     a2 = Pawn->K2_GetActorLocation();
     a3 = a1->GetControlRotation();
@@ -273,50 +374,72 @@ void GetPlayerViewPointHook(AFortPlayerController *a1, FVector &a2,
 
 DWORD ThreadTEST(LPVOID) {
   Sleep(5500);
+  
+  // Validate game mode and game state
+  auto GameMode = GetGameMode();
+  auto GameState = GetGameState();
+  
+  if (!GameMode || !GameState) {
+    LOG_("ERROR: GameMode or GameState is null in ThreadTEST");
+    return 1;
+  }
+  
   static void (*sub_7FF6B922C400)(__int64, char) =
       decltype(sub_7FF6B922C400)(GetOffsetBRUH(0xFBC400));
-  sub_7FF6B922C400(__int64(GetGameMode()),
+  sub_7FF6B922C400(__int64(GameMode),
                    1); // if I look more into this I may be able to find
 
-  GetGameState()->SafeZonesStartTime = 0.01f;
-  GetGameState()->bAircraftIsLocked = false;
+  GameState->SafeZonesStartTime = 0.01f;
+  GameState->bAircraftIsLocked = false;
   return 1;
 }
 
 void (*EnterAircraft)(AFortPlayerController *a1,
                       unsigned __int64 AircraftProbably);
 void EnterAircraftHook(AFortPlayerControllerAthena *a1, unsigned __int64 a2) {
+  // Validate player controller
+  if (!a1) {
+    LOG_("ERROR: a1 is null in EnterAircraftHook");
+    return EnterAircraft(a1, a2);
+  }
+  
+  // Validate game state and game mode
+  auto GameState = GetGameState();
+  auto GameMode = GetGameMode();
+  auto World = GetWorld();
+  auto Statics = GetStatics();
+  
+  if (!GameState || !GameMode || !World || !Statics) {
+    LOG_("ERROR: GameState, GameMode, World, or Statics is null in EnterAircraftHook");
+    return EnterAircraft(a1, a2);
+  }
+  
   UptimeWebHook.send_embed("Match has started!", "**BattleBus launched!**");
 
   LOG_("__int64(a1): {}", __int64(a1));
   LOG_("a22: {}", a2);
 
-  /*if (auto PC = Cast<AFortPlayerControllerAthena>(a1))
-  {
-      LOG_("testesetsetsetsets");
-  }*/
-
   static bool aa1WOWRACIST = false;
   if (!aa1WOWRACIST && Globals::bLategame) {
     aa1WOWRACIST = true;
     auto Aircraft = static_cast<AFortAthenaAircraft *>(nullptr);
-    Aircraft = GetGameState()->GetAircraft(0);
+    Aircraft = GameState->GetAircraft(0);
 
     LOG_("TEST: num safe zones locations {}",
-         GetGameMode()->SafeZoneLocations.Num());
+         GameMode->SafeZoneLocations.Num());
 
-    if (Aircraft) {
+    if (Aircraft && GameMode->SafeZoneLocations.Num() > 4) {
       Aircraft->FlightInfo.FlightSpeed = 0.01f;
-      FVector Loc = GetGameMode()->SafeZoneLocations[4];
+      FVector Loc = GameMode->SafeZoneLocations[4];
       Loc.Z = 19000;
       Aircraft->FlightInfo.FlightStartLocation = (FVector_NetQuantize100)Loc;
 
       Aircraft->FlightInfo.TimeTillFlightEnd = 10;
       Aircraft->FlightInfo.TimeTillDropEnd = 10;
       Aircraft->FlightInfo.TimeTillDropStart = 5;
-      Aircraft->DropStartTime = GetStatics()->GetTimeSeconds(GetWorld()) + 5;
-      Aircraft->DropEndTime = GetStatics()->GetTimeSeconds(GetWorld()) + 7;
-      GetGameState()->bAircraftIsLocked = true;
+      Aircraft->DropStartTime = Statics->GetTimeSeconds(World) + 5;
+      Aircraft->DropEndTime = Statics->GetTimeSeconds(World) + 7;
+      GameState->bAircraftIsLocked = true;
 
       CreateThread(0, 0, ThreadTEST, 0, 0, 0);
     }
@@ -546,10 +669,24 @@ void EnterAircraftHook(AFortPlayerControllerAthena *a1, unsigned __int64 a2) {
 // TEST
 void (*ServerSetTeam)(void *, uint8);
 void ServerSetTeamHook(AFortPlayerControllerAthena *PC, uint8 NewTeam) {
+  // Validate player controller
+  if (!PC) {
+    LOG_("ERROR: PC is null in ServerSetTeamHook");
+    return;
+  }
+  
   ServerSetTeam(PC, NewTeam); // the original does pretty much as setting
                               // TeamIndex and respawning player probably well I
                               // just gotta update the gamememberinfoarray
   LOG_("ServerSetTeam CALLED, {}", NewTeam);
+  
+  // Validate GameState before using
+  auto GameState = GetGameState();
+  if (!GameState) {
+    LOG_("ERROR: GameState is null in ServerSetTeamHook");
+    return;
+  }
+  
   // idk maybe check for SquadId
   if (auto PlayerState = Cast<AFortPlayerStateAthena>(PC->PlayerState)) {
 
@@ -561,28 +698,28 @@ void ServerSetTeamHook(AFortPlayerControllerAthena *PC, uint8 NewTeam) {
 
     LOG_("new squadid: {}", PlayerState->SquadId);
 
-    for (int i = 0; i < GetGameState()->GameMemberInfoArray.Members.Num();
+    for (int i = 0; i < GameState->GameMemberInfoArray.Members.Num();
          i++) {
-      auto CurrentUniqueId = decltype(GetGameState()
+      auto CurrentUniqueId = decltype(GameState
                                           ->GameMemberInfoArray.Members[i]
                                           .MemberUniqueId){};
       CurrentUniqueId =
-          GetGameState()->GameMemberInfoArray.Members[i].MemberUniqueId;
+          GameState->GameMemberInfoArray.Members[i].MemberUniqueId;
       if (PlayerState->AreUniqueIDsIdentical(CurrentUniqueId,
                                              PlayerState->UniqueId)) {
         LOG_("FOUNDD ODUDUD DUODUODU UNIQUEID");
-        GetGameState()->GameMemberInfoArray.Members.Remove(
+        GameState->GameMemberInfoArray.Members.Remove(
             i); // idk why crash tho if I just change it and call MarkItemDirty
                 // so skunky bozo
-        GetGameState()->GameMemberInfoArray.MarkArrayDirty();
+        GameState->GameMemberInfoArray.MarkArrayDirty();
 
         FGameMemberInfo test{-1, -1, -1};
         test.TeamIndex = PlayerState->TeamIndex;
         test.SquadId = PlayerState->SquadId;
         test.MemberUniqueId = PlayerState->UniqueId;
 
-        GetGameState()->GameMemberInfoArray.Members.Add(test);
-        GetGameState()->GameMemberInfoArray.MarkItemDirty(test);
+        GameState->GameMemberInfoArray.Members.Add(test);
+        GameState->GameMemberInfoArray.MarkItemDirty(test);
       }
     }
   }
@@ -597,6 +734,20 @@ void (*ClientOnPawnDiedOG)(AFortPlayerControllerZone *a1,
                            FFortPlayerDeathReport a2);
 void ClientOnPawnDiedHook(AFortPlayerControllerZone *DeadPlayer,
                           FFortPlayerDeathReport &DeathReport) {
+  // Validate dead player controller
+  if (!DeadPlayer) {
+    LOG_("ERROR: DeadPlayer is null in ClientOnPawnDiedHook");
+    return;
+  }
+  
+  // Validate GameState and GameMode before proceeding
+  auto GameState = GetGameState();
+  auto GameMode = GetGameMode();
+  if (!GameState || !GameMode) {
+    LOG_("ERROR: GameState or GameMode is null in ClientOnPawnDiedHook");
+    return ClientOnPawnDiedOG(DeadPlayer, DeathReport);
+  }
+  
   auto DeadPawn = (AFortPlayerPawnAthena *)DeadPlayer->Pawn;
   auto DeadPlayerState = (AFortPlayerStateAthena *)DeadPlayer->PlayerState;
   auto KillerPlayerState =
@@ -635,7 +786,7 @@ void ClientOnPawnDiedHook(AFortPlayerControllerZone *DeadPlayer,
     KillerPlayerState->OnRep_Score();
   }
 
-  if (!GetGameState()->IsRespawningAllowed(DeadPlayerState)) {
+  if (!GameState->IsRespawningAllowed(DeadPlayerState)) {
     if (!DeadPawn->IsDBNO()) {
       if (DeadPlayer->WorldInventory) {
         for (int i = 0;
@@ -661,7 +812,7 @@ void ClientOnPawnDiedHook(AFortPlayerControllerZone *DeadPlayer,
       }
 
       RemoveFromAlivePlayerOG(
-          GetGameMode(), DeadPlayer,
+          GameMode, DeadPlayer,
           KillerPlayerState == DeadPlayerState ? nullptr : KillerPlayerState,
           KillerPawn, WeaponDef, DeadPlayerState->DeathInfo.DeathCause, 0);
     }
@@ -672,6 +823,12 @@ void ClientOnPawnDiedHook(AFortPlayerControllerZone *DeadPlayer,
 
 void ServerPlayEmoteItemHook(AFortPlayerControllerAthena *PC,
                              UFortItemDefinition *EmoteAsset) {
+  // Validate player controller
+  if (!PC) {
+    LOG_("ERROR: PC is null in ServerPlayEmoteItemHook");
+    return;
+  }
+  
   if (PC->IsInAircraft())
     return; // tbh checking for PC->Pawn should do the same idk
 
@@ -679,7 +836,15 @@ void ServerPlayEmoteItemHook(AFortPlayerControllerAthena *PC,
     if (auto DanceItemDefinition =
             Cast<UAthenaDanceItemDefinition>(EmoteAsset)) {
       LOG_("EMOTING !!!");
-      auto Granted = GrantAbility((AFortPlayerStateAthena *)PC->PlayerState,
+      
+      // Validate player state
+      auto PlayerState = (AFortPlayerStateAthena *)PC->PlayerState;
+      if (!PlayerState || !PlayerState->AbilitySystemComponent) {
+        LOG_("ERROR: PlayerState or AbilitySystemComponent is null in ServerPlayEmoteItemHook");
+        return;
+      }
+      
+      auto Granted = GrantAbility(PlayerState,
                                   UGAB_Emote_Generic_C::StaticClass(),
                                   DanceItemDefinition, true);
 
@@ -687,8 +852,7 @@ void ServerPlayEmoteItemHook(AFortPlayerControllerAthena *PC,
       Pawn->bMovingEmoteForwardOnly = DanceItemDefinition->bMoveForwardOnly;
       Pawn->EmoteWalkSpeed = DanceItemDefinition->WalkForwardSpeed;
 
-      ((AFortPlayerStateAthena *)PC->PlayerState)
-          ->AbilitySystemComponent->ServerTryActivateAbility(
+      PlayerState->AbilitySystemComponent->ServerTryActivateAbility(
               Granted->Handle, Granted->InputPressed,
               Granted->ActivationInfo.PredictionKeyWhenActivated);
     }
@@ -697,6 +861,12 @@ void ServerPlayEmoteItemHook(AFortPlayerControllerAthena *PC,
 
 void ServerAttemptInventoryDropHook(AFortPlayerController *PC, FGuid &ItemGuid,
                                     int32 Count) {
+  // Validate player controller
+  if (!PC) {
+    LOG_("ERROR: PC is null in ServerAttemptInventoryDropHook");
+    return;
+  }
+  
   if (auto Pawn = PC->Pawn) {
     if (auto ItemEntry = Inventory::FindItemEntry(PC, ItemGuid)) {
       if (Count > ItemEntry->Count)
@@ -705,7 +875,9 @@ void ServerAttemptInventoryDropHook(AFortPlayerController *PC, FGuid &ItemGuid,
       auto Spawned = SpawnPickup(*ItemEntry, Pawn->K2_GetActorLocation(),
                                  EFortPickupSourceTypeFlag::Player,
                                  EFortPickupSpawnSource::Unset);
-      Spawned->PawnWhoDroppedPickup = (AFortPawn *)PC->Pawn;
+      if (Spawned) {
+        Spawned->PawnWhoDroppedPickup = (AFortPawn *)PC->Pawn;
+      }
       Inventory::RemoveItem(PC, ItemEntry->ItemDefinition, Count);
     }
   }
@@ -719,6 +891,13 @@ void ServerAttemptInteractHook(UFortControllerComponent_Interaction *Comp,
                                AActor *ReceivingActor,
                                UPrimitiveComponent *InteractComponent,
                                ETInteractionType InteractType, __int64 ssss) {
+  // Validate component and receiving actor
+  if (!Comp || !ReceivingActor) {
+    LOG_("ERROR: Comp or ReceivingActor is null in ServerAttemptInteractHook");
+    return ServerAttemptInteractOG(Comp, ReceivingActor, InteractComponent,
+                                   InteractType, ssss);
+  }
+  
   auto PC = Cast<AFortPlayerController>(Comp->GetOwner());
   if (PC) {
     if (auto Container = Cast<ABuildingContainer>(ReceivingActor)) {
@@ -803,25 +982,38 @@ void ServerAttemptInteractHook(UFortControllerComponent_Interaction *Comp,
 // aaTest: 0x1003280
 void (*ExitAircraft)(AFortPlayerControllerAthena *a1);
 void ExitAircraftHook(AFortPlayerControllerAthena *a1) {
-  if (a1) {
-    ExitAircraft(a1);
-
-    if (Globals::bLategame) {
-      LOG_("LATEGAME!!!!");
-      FVector Loc = GetGameMode()->SafeZoneLocations[4];
-      Loc.Z = 19000;
-      FRotator Rot = a1->GetControlRotation();
-      if (a1->Pawn) {
-        LOG_("VALID PANW LOL!");
-        a1->Pawn->K2_TeleportTo(Loc, Rot);
-        ((AFortPawn *)a1->Pawn)->SetShield(100);
-      }
-    }
-
-    return;
+  if (!a1) {
+    LOG_("ERROR: a1 is null in ExitAircraftHook");
+    return ExitAircraft(a1);
   }
+  
+  ExitAircraft(a1);
 
-  return ExitAircraft(a1);
+  if (Globals::bLategame) {
+    LOG_("LATEGAME!!!!");
+    
+    // Validate GameMode before using
+    auto GameMode = GetGameMode();
+    if (!GameMode) {
+      LOG_("ERROR: GameMode is null in ExitAircraftHook");
+      return;
+    }
+    
+    // Check if SafeZoneLocations has enough elements
+    if (GameMode->SafeZoneLocations.Num() <= 4) {
+      LOG_("ERROR: SafeZoneLocations has insufficient elements in ExitAircraftHook");
+      return;
+    }
+    
+    FVector Loc = GameMode->SafeZoneLocations[4];
+    Loc.Z = 19000;
+    FRotator Rot = a1->GetControlRotation();
+    if (a1->Pawn) {
+      LOG_("VALID PANW LOL!");
+      a1->Pawn->K2_TeleportTo(Loc, Rot);
+      ((AFortPawn *)a1->Pawn)->SetShield(100);
+    }
+  }
 }
 
 void InitHoksPC() {

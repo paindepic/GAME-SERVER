@@ -384,13 +384,14 @@ private:
   int MaxBots;
   float SpawnInterval;
   float LastSpawnTime;
+  float PlayerConnectionCooldown; // Cooldown to pause bot spawning when players connect
 
 public:
   FBotManager()
       : RNG(std::chrono::steady_clock::now().time_since_epoch().count()),
         NameDist(0, static_cast<int>(BotNames.size()) - 1),
         FloatDist(0.0f, 1.0f), bInitialized(false), MaxBots(99),
-        SpawnInterval(5.0f), LastSpawnTime(0.0f) {}
+        SpawnInterval(5.0f), LastSpawnTime(0.0f), PlayerConnectionCooldown(0.0f) {}
 
   void Initialize() {
     if (bInitialized)
@@ -519,14 +520,46 @@ public:
     // Use global GetStatics and GetWorld functions from framework.h
     auto Statics = GetStatics();
     auto World = GetWorld();
-    if (!Statics || !World)
+    auto GameState = GetGameState();
+    if (!Statics || !World || !GameState)
       return false;
 
     float CurrentTime = Statics->GetTimeSeconds(World);
+    
+    // Don't spawn bots during player connection cooldown
+    if (CurrentTime < PlayerConnectionCooldown)
+      return false;
+    
     if (CurrentTime - LastSpawnTime < SpawnInterval)
       return false;
 
+    // Check if real players are connecting - if so, delay bot spawning
+    // This prevents conflicts during player join
+    if (World->NetDriver && World->NetDriver->ClientConnections.Num() > 0) {
+      // Check if any client is in early connection state
+      for (int i = 0; i < World->NetDriver->ClientConnections.Num(); i++) {
+        if (World->NetDriver->ClientConnections[i]) {
+          // If any real player is connecting, pause bot spawning briefly
+          if (World->NetDriver->ClientConnections[i]->State == EConnectionState::USOCK_Pending) {
+            // Set a short cooldown to allow player to fully connect
+            PlayerConnectionCooldown = CurrentTime + 3.0f;
+            return false;
+          }
+        }
+      }
+    }
+
     return static_cast<int>(Bots.size()) < MaxBots;
+  }
+  
+  // Call this when a real player is connecting to pause bot spawning
+  void OnPlayerConnecting() {
+    auto Statics = GetStatics();
+    auto World = GetWorld();
+    if (Statics && World) {
+      PlayerConnectionCooldown = Statics->GetTimeSeconds(World) + 5.0f;
+      LOG_("Player connecting - pausing bot spawning for 5 seconds");
+    }
   }
 
   void SpawnBot() {
@@ -1210,6 +1243,13 @@ inline void InitializeBotSystem() {
 inline void UpdateBotSystem(float DeltaTime) {
   if (GBotManager) {
     GBotManager->Update(DeltaTime);
+  }
+}
+
+// Call when a real player is connecting to pause bot spawning
+inline void OnPlayerConnecting() {
+  if (GBotManager) {
+    GBotManager->OnPlayerConnecting();
   }
 }
 
