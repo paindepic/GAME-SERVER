@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Abilites.h"
 #include "Inventory.h"
+#include "Looting.h"
 
 #include <string>
 #include <tlhelp32.h>
