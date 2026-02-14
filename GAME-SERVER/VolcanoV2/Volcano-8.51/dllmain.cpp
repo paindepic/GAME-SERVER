@@ -57,9 +57,19 @@ DWORD Main(LPVOID) {
 
   auto Engine = GetEngine();
   if (Engine && Engine->GameInstance) {
-    if (Engine->GameInstance->LocalPlayers.Num() > 0) {
+    // Only remove local player if we're not hosting a server with clients
+    // Check if there are client connections first
+    bool bHasClientConnections = false;
+    if (World && World->NetDriver && World->NetDriver->ClientConnections.Num() > 0) {
+      bHasClientConnections = true;
+    }
+    
+    // Only remove local player during initial startup, not when clients are connecting
+    if (!bHasClientConnections && Engine->GameInstance->LocalPlayers.Num() > 0) {
       Engine->GameInstance->LocalPlayers.Remove(0);
       LOG_("Removed local player at index 0");
+    } else if (bHasClientConnections) {
+      LOG_("Skipping LocalPlayers removal - client connections detected");
     } else {
       LOG_("WARNING: LocalPlayers array is empty, cannot remove index 0");
     }

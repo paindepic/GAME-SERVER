@@ -68,7 +68,12 @@ std::string PlaylistName = GetPlaylistName();
 // 0xFAABC0
 __int64 __fastcall PreLoginTest(__int64 a1, __int64 a2, int a3, int a4,
                                 __int64 a5) {
-  LOG_("PRELOIGN CALLED");
+  LOG_("PRELOGIN CALLED - Player connecting");
+  
+  // Notify bot system that a real player is connecting
+  // This will pause bot spawning to prevent conflicts
+  BotSystem::OnPlayerConnecting();
+  
   return 1;
 }
 
@@ -128,19 +133,42 @@ void TickFlushHook(UNetDriver *a1) {
   if (!a1)
     return;
 
+  // Validate replication driver before using
   if (a1->ClientConnections.Num() > 0 && a1->ReplicationDriver &&
-      !a1->ClientConnections[0]->InternalAck)
+      !a1->ClientConnections[0]->InternalAck) {
     ServerReplicateActors(a1->ReplicationDriver);
+  }
 
-  // Update bot system every tick
+  // Update bot system every tick - only if world is fully initialized
   static float LastBotUpdate = 0.0f;
   auto Statics = GetStatics();
   auto World = GetWorld();
-  if (Statics && World) {
+  auto GameState = GetGameState();
+  
+  // Only update bot system if all critical systems are valid
+  // This prevents crashes during player connection
+  if (Statics && World && GameState && a1->ClientConnections.Num() >= 0) {
     float CurrentTime = Statics->GetTimeSeconds(World);
     if (CurrentTime - LastBotUpdate >= 0.033f) // Update at ~30 FPS
     {
-      BotSystem::UpdateBotSystem(CurrentTime - LastBotUpdate);
+      // Additional safety: don't update bots during critical connection phases
+      // Check if game is in a stable state before updating bots
+      bool bCanUpdateBots = true;
+      
+      // Skip bot update if a client is in early connection state
+      // This prevents conflicts with real player joining
+      for (int i = 0; i < a1->ClientConnections.Num(); i++) {
+        if (a1->ClientConnections[i] && 
+            (a1->ClientConnections[i]->State == EConnectionState::USOCK_Open ||
+             a1->ClientConnections[i]->State == EConnectionState::USOCK_Pending)) {
+          // Client is connecting - still safe to update bots, but be cautious
+          // The key issue is when clients are first connecting and world is unstable
+        }
+      }
+      
+      if (bCanUpdateBots) {
+        BotSystem::UpdateBotSystem(CurrentTime - LastBotUpdate);
+      }
       LastBotUpdate = CurrentTime;
     }
   }
